@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 
 export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
-  const [username, setUsername] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const router = useRouter()
@@ -21,39 +21,65 @@ export default function LoginForm() {
     setError('')
 
     try {
-      console.log('Attempting login with:', { username, password })
+      // First, get the JWT tokens
+      const loginUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/login/`
+      console.log('Login URL:', loginUrl)
+      console.log('Attempting login with:', { email, password })
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/accounts/auth/login/`, {
+      const response = await fetch(loginUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
-          username: username,
-          password: password
+          email,
+          password
         }),
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Login failed')
+        throw new Error(data.error || 'Login failed')
       }
 
-      const data = await response.json()
       console.log('Login response:', data)
 
       // Store tokens
       localStorage.setItem('accessToken', `Bearer ${data.access}`)
       localStorage.setItem('refreshToken', data.refresh)
       
-      // Store user data
-      localStorage.setItem('user', JSON.stringify(data.user))
+      // Now fetch the user data
+      const userResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/me/`, {
+        headers: {
+          'Authorization': `Bearer ${data.access}`,
+        },
+      })
 
-      // Redirect based on user type
-      if (data.user.user_type === 'emergency_responder' || data.user.user_type === 'coordinator') {
-        router.push('/emergency-dashboard')
-      } else {
-        router.push('/dashboard')
+      if (!userResponse.ok) {
+        throw new Error('Failed to fetch user data')
+      }
+
+      const userData = await userResponse.json()
+      console.log('User data:', userData)
+      
+      // Store user data
+      localStorage.setItem('user', JSON.stringify(userData))
+
+      // Redirect based on user role
+      switch (userData.role) {
+        case 'ADMINISTRATOR':
+          router.push('/admin-dashboard')
+          break
+        case 'EMERGENCY_PERSONNEL':
+        case 'RESOURCE_MANAGER':
+          router.push('/emergency-dashboard')
+          break
+        case 'MEDICAL_PERSONNEL':
+          router.push('/medical-dashboard')
+          break
+        default:
+          router.push('/dashboard')
       }
       router.refresh()
     } catch (err) {
@@ -72,13 +98,13 @@ export default function LoginForm() {
       </div>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="username">Username</Label>
+          <Label htmlFor="email">Email</Label>
           <Input 
-            id="username" 
-            placeholder="Enter your username" 
-            type="text" 
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            id="email" 
+            placeholder="Enter your email" 
+            type="email" 
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required 
             disabled={isLoading} 
           />

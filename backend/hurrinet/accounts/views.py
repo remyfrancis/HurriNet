@@ -160,3 +160,9 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.request.user.is_staff:
             return User.objects.all()
         return User.objects.filter(id=self.request.user.id)
+
+    @action(detail=False, methods=["get"])
+    def me(self, request):
+        """Get the current user's data."""
+        serializer = self.get_serializer(request.user)
+        return Response(serializer.data)

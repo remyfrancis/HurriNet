@@ -301,11 +301,7 @@ def create_default_groups_and_permissions(sender, **kwargs):
             group.permissions.set(permissions_to_add)
 
 
-class CustomUserManager(BaseUserManager):
-    """
-    Custom user manager for email-based authentication.
-    """
-
+class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
             raise ValueError("The Email field must be set")
@@ -316,29 +312,8 @@ class CustomUserManager(BaseUserManager):
         return user
 
     def create_superuser(self, email, password=None, **extra_fields):
-        """
-        Create and save a SuperUser with the given email and password.
-
-        Args:
-            email: SuperUser's email address
-            password: SuperUser's password
-            **extra_fields: Additional fields for the user model
-
-        Returns:
-            User object with superuser permissions
-
-        Raises:
-            ValueError: If is_staff or is_superuser is not True
-        """
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
-        extra_fields.setdefault("role", "ADMINISTRATOR")
-
-        if extra_fields.get("is_staff") is not True:
-            raise ValueError("Superuser must have is_staff=True.")
-        if extra_fields.get("is_superuser") is not True:
-            raise ValueError("Superuser must have is_superuser=True.")
-
         return self.create_user(email, password, **extra_fields)
 
 
@@ -359,8 +334,8 @@ class User(AbstractUser):
     )
 
     # Basic user information
-    username = None  # Remove username field as we use email
-    email = models.CharField(max_length=255, unique=True)
+    username = models.CharField(max_length=150, unique=True, null=True, blank=True)
+    email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="CITIZEN")
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
@@ -380,7 +355,7 @@ class User(AbstractUser):
     date_joined = models.DateTimeField(default=timezone.now)
 
     # Use custom manager for user operations
-    objects = CustomUserManager()
+    objects = UserManager()
 
     # Django auth system configuration - Using CustomGroup instead of default Group
     groups = models.ManyToManyField(
@@ -401,14 +376,14 @@ class User(AbstractUser):
 
     # Configure email as the main identifier
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["first_name", "last_name"]  # Required during user creation
+    REQUIRED_FIELDS = []  # Remove 'email' from here since it's now the USERNAME_FIELD
 
     class Meta:
         db_table = "users"  # Custom database table name
 
     def __str__(self):
         """String representation of the user"""
-        return f"{self.first_name} {self.last_name} ({self.email})"
+        return self.email
 
     def is_emergency_personnel(self):
         """Check if the user is emergency personnel"""

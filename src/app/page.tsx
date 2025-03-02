@@ -33,12 +33,12 @@ export default function LandingPage() {
             </Link>
           </nav>
           <div className="flex items-center gap-4">
-            <Link href="#login">
+            <Link href="/auth/login">
               <Button variant="outline" size="sm">
                 Log in
               </Button>
             </Link>
-            <Link href="#register">
+            <Link href="/auth/register">
               <Button size="sm">Register</Button>
             </Link>
           </div>
@@ -156,7 +156,7 @@ export default function LandingPage() {
               </div>
               <div className="flex flex-col items-center space-y-2 rounded-lg border p-6 shadow-sm">
                 <Users className="h-12 w-12 text-primary" />
-                <h3 className="text-xl font-bold">Community Network</h3>
+                <h3 className="text-xl font-bold">Community</h3>
                 <p className="text-center text-sm text-muted-foreground">
                   Connect with neighbors and local emergency response teams
                 </p>
