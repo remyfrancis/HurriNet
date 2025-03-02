@@ -45,8 +45,8 @@ class Incident(models.Model):
         ("CLOSED", "Closed"),
     ]
 
-    title = models.CharField(max_length=255)
-    description = models.TextField()
+    title = models.CharField(max_length=255, default="Untitled Incident")
+    description = models.TextField(blank=True, default="")
     incident_type = models.CharField(
         max_length=20, choices=INCIDENT_TYPES, default="OTHER"
     )
@@ -63,7 +63,8 @@ class Incident(models.Model):
     )
     reported_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
         related_name="reported_incidents",
     )
     verified_by = models.ForeignKey(
@@ -92,7 +93,7 @@ class Incident(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.get_incident_type_display()} at {self.location or 'Unknown Location'}"
+        return f"{self.title} ({self.get_incident_type_display()}) at {self.location or 'Unknown Location'}"
 
 
 class IncidentUpdate(models.Model):

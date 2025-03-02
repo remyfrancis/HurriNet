@@ -67,7 +67,7 @@ class IncidentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Create a new incident and set the reporter."""
-        serializer.save(reported_by=self.request.user)
+        return serializer.save(reported_by=self.request.user)
 
     @action(detail=True, methods=["post"])
     def update_status(self, request, pk=None):
@@ -203,77 +203,47 @@ class IncidentViewSet(viewsets.ModelViewSet):
         )
 
     def create(self, request, *args, **kwargs):
+        """Create a new incident."""
         try:
             # Debug print
             print("Received data:", request.data)
             print("Files:", request.FILES)
 
-            # Generate unique tracking ID
-            while True:
-                tracking_id = str(uuid.uuid4())[:8]
-                if not Incident.objects.filter(tracking_id=tracking_id).exists():
-                    break
-
-            # Extract coordinates from location string
-            location = request.data.get("location", "")
-            print("Location:", location)  # Debug print
-
-            if not location:
-                return Response(
-                    {"error": "Location is required"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            location = location.split(",")
-            if len(location) != 2:
-                return Response(
-                    {"error": f"Invalid location format: {location}"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            try:
-                latitude = float(
-                    location[0].strip()
-                )  # Added strip() to remove whitespace
-                longitude = float(location[1].strip())
-            except ValueError as e:
-                return Response(
-                    {"error": f"Invalid coordinates: {str(e)}"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
             # Create incident data
             data = {
-                "tracking_id": tracking_id,
-                "incident_type": request.data.get("incidentType"),
+                "title": request.data.get("title"),
                 "description": request.data.get("description"),
-                "latitude": latitude,
-                "longitude": longitude,
-                "status": "pending",
+                "incident_type": request.data.get("incident_type"),
+                "severity": request.data.get("severity"),
+                "location": request.data.get("location"),
+                "latitude": request.data.get("latitude"),
+                "longitude": request.data.get("longitude"),
             }
 
-            print("Processed data:", data)  # Debug print
+            # Handle file attachment if present
+            if "attachment" in request.FILES:
+                data["attachment"] = request.FILES["attachment"]
 
-            # Handle photo if present
-            if "photo" in request.FILES:
-                data["photo"] = request.FILES["photo"]
+            # Use IncidentCreateSerializer for validation and creation
+            create_serializer = self.get_serializer(data=data)
+            create_serializer.is_valid(raise_exception=True)
+            instance = self.perform_create(create_serializer)
 
-            # Create the incident directly
-            incident = Incident.objects.create(**data)
-
-            # Serialize the created incident
-            serializer = self.get_serializer(incident)
-
+            # Use IncidentSerializer for the response
+            response_serializer = IncidentSerializer(
+                instance, context={"request": request}
+            )
+            headers = self.get_success_headers(response_serializer.data)
             return Response(
-                {"success": True, "tracking_id": tracking_id, "data": serializer.data},
+                response_serializer.data,
                 status=status.HTTP_201_CREATED,
+                headers=headers,
             )
 
         except Exception as e:
-            import traceback
-
-            print("Error:", str(e))
-            print("Traceback:", traceback.format_exc())
+            print("Error:", str(e))  # Debug print
+            print("Traceback:", e.__traceback__)  # Debug print
             return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
