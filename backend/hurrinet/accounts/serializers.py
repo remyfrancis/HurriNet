@@ -24,28 +24,32 @@ class UserSerializer(serializers.ModelSerializer):
 
     Fields:
     - id: User's unique identifier
-    - username: User's username
     - email: User's email address
-    - user_type: User's role/type in the system
+    - first_name: User's first name
+    - last_name: User's last name
+    - role: User's role in the system
     - phone_number: User's contact number
-    - location: User's location information
-    - organization: User's affiliated organization
-    - verified: User's verification status (read-only)
+    - address: User's address
+    - first_responder_id: First responder identification
+    - medical_license_id: Medical license number
+    - is_active: User's active status
     """
 
     class Meta:
         model = User
         fields = (
             "id",
-            "username",
             "email",
-            "user_type",
+            "first_name",
+            "last_name",
+            "role",
             "phone_number",
-            "location",
-            "organization",
-            "verified",
+            "address",
+            "first_responder_id",
+            "medical_license_id",
+            "is_active",
         )
-        read_only_fields = ("verified",)
+        read_only_fields = ("is_active",)
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -58,41 +62,39 @@ class RegisterSerializer(serializers.ModelSerializer):
     3. Password handling and security
 
     Fields:
-    - username: Required, unique username
     - email: Required, unique email address
     - password: Required, write-only field
     - first_name: Required user's first name
-    - last_name: Optional user's last name
-    - user_type: Required user role/type
+    - last_name: Required user's last name
+    - role: Required user role
     - phone_number: Optional contact number
-    - location: Required location information
-    - organization: Optional organization name
-
-    The create method handles proper user creation using
-    the User.objects.create_user method to ensure secure
-    password hashing.
+    - address: Required address
+    - first_responder_id: Optional first responder ID
+    - medical_license_id: Optional medical license number
     """
+
+    password = serializers.CharField(write_only=True)
 
     class Meta:
         model = User
         fields = (
-            "username",
             "email",
             "password",
             "first_name",
             "last_name",
-            "user_type",
+            "role",
             "phone_number",
-            "location",
-            "organization",
+            "address",
+            "first_responder_id",
+            "medical_license_id",
         )
         extra_kwargs = {
             "password": {"write_only": True},
             "email": {"required": True},
-            "username": {"required": True},
             "first_name": {"required": True},
-            "user_type": {"required": True},
-            "location": {"required": True},
+            "last_name": {"required": True},
+            "role": {"required": True},
+            "address": {"required": True},
         }
 
     def create(self, validated_data):
@@ -114,17 +116,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             ValidationError: If user creation fails
         """
         try:
-            user = User.objects.create_user(
-                username=validated_data["username"],
-                email=validated_data["email"],
-                password=validated_data["password"],
-                first_name=validated_data.get("first_name", ""),
-                last_name=validated_data.get("last_name", ""),
-                user_type=validated_data.get("user_type", "public"),
-                location=validated_data.get("location", ""),
-                phone_number=validated_data.get("phone_number", ""),
-                organization=validated_data.get("organization", ""),
-            )
+            user = User.objects.create_user(**validated_data)
             return user
         except Exception as e:
             raise serializers.ValidationError(f"Failed to create user: {str(e)}")

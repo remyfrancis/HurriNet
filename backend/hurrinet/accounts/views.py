@@ -102,7 +102,7 @@ class AuthViewSet(viewsets.ViewSet):
         3. Generates new authentication tokens
 
         Request Body:
-            - username: User's email address
+            - email: User's email address
             - password: User's password
 
         Returns:
@@ -110,16 +110,16 @@ class AuthViewSet(viewsets.ViewSet):
             400: Missing credentials
             401: Invalid credentials
         """
-        username = request.data.get("username")
+        email = request.data.get("email")
         password = request.data.get("password")
 
-        if not username or not password:
+        if not email or not password:
             return Response(
-                {"error": "Please provide both username and password"},
+                {"error": "Please provide both email and password"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        user = authenticate(username=username, password=password)
+        user = authenticate(email=email, password=password)
 
         if user:
             refresh = RefreshToken.for_user(user)

@@ -99,48 +99,40 @@ class CustomUserAdmin(UserAdmin):
     Admin configuration for custom User model.
 
     This admin interface extends Django's UserAdmin to handle our custom User model
-    with email-based authentication and role-based permissions.
-
-    Features:
-    1. User Information Display:
-       - Email (primary identifier)
-       - Name and role
-       - Staff status
-
-    2. Filtering Options:
-       - By role
-       - By staff/superuser status
-       - By active status
-       - By group membership
-
-    3. Field Organization:
-       - Basic credentials (email, password)
-       - Personal information
-       - Professional information
-       - Permissions and groups
-       - Account dates
-
-    4. Add Form Configuration:
-       - Streamlined user creation
-       - Essential fields only
-       - Role selection
+    with email-based authentication and additional fields. Features include:
+    - Display of user information including role and status
+    - Filtering by role and status
+    - Search across multiple user fields
+    - Organized fieldsets for adding/editing users
     """
 
-    list_display = ("email", "first_name", "last_name", "role", "is_staff")
-    list_filter = ("role", "is_staff", "is_superuser", "is_active", "groups")
+    list_display = (
+        "email",
+        "first_name",
+        "last_name",
+        "role",
+        "is_active",
+        "is_staff",
+    )
+    list_filter = ("role", "is_active", "is_staff", "is_superuser")
     search_fields = ("email", "first_name", "last_name")
     ordering = ("email",)
-    filter_horizontal = ("groups", "user_permissions")
 
-    # Configuration for editing existing users
     fieldsets = (
         (None, {"fields": ("email", "password")}),
         (
-            "Personal info",
-            {"fields": ("first_name", "last_name", "role", "phone_number", "address")},
+            "Personal Info",
+            {
+                "fields": (
+                    "first_name",
+                    "last_name",
+                    "phone_number",
+                    "address",
+                )
+            },
         ),
         (
-            "Professional info",
+            "Professional Info",
             {
                 "fields": (
                     "first_responder_id",
@@ -152,18 +144,18 @@ class CustomUserAdmin(UserAdmin):
             "Permissions",
             {
                 "fields": (
+                    "role",
                     "is_active",
                     "is_staff",
                     "is_superuser",
                     "groups",
                     "user_permissions",
-                ),
+                )
             },
         ),
         ("Important dates", {"fields": ("last_login", "date_joined")}),
     )
 
-    # Configuration for adding new users
     add_fieldsets = (
         (
             None,
@@ -176,6 +168,8 @@ class CustomUserAdmin(UserAdmin):
                     "first_name",
                     "last_name",
                     "role",
+                    "phone_number",
+                    "address",
                 ),
             },
         ),

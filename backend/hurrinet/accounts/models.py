@@ -303,25 +303,10 @@ def create_default_groups_and_permissions(sender, **kwargs):
 
 class CustomUserManager(BaseUserManager):
     """
-    Custom user manager where email is the unique identifier
-    for authentication instead of usernames.
+    Custom user manager for email-based authentication.
     """
 
     def create_user(self, email, password=None, **extra_fields):
-        """
-        Create and save a user with the given email and password.
-
-        Args:
-            email: User's email address (required)
-            password: User's password (optional)
-            **extra_fields: Additional fields for the user model
-
-        Returns:
-            User object
-
-        Raises:
-            ValueError: If email is not provided
-        """
         if not email:
             raise ValueError("The Email field must be set")
         email = self.normalize_email(email)
