@@ -39,8 +39,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# cursor rules
-/.cursor
-/rules
-/.cursor/rules
-commenting.mdc
+#venv
+venv/
