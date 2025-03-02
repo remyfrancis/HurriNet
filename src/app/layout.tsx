@@ -138,7 +138,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AlertProvider>
           <div className="flex h-screen">
-            <Sidebar items={sidebarItems} />
+            {/* <Sidebar items={sidebarItems} /> */}
             <main className="flex-1">
               <SupplierUpdatesProvider>
                 {children}

@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
 
 export default function RegisterForm() {
   const router = useRouter()
@@ -24,15 +25,12 @@ export default function RegisterForm() {
 
     const formData = new FormData(event.currentTarget)
     const data = {
-      username: formData.get('username'),
       email: formData.get('email'),
       password: formData.get('password'),
       first_name: formData.get('firstName'),
       last_name: formData.get('lastName'),
-      user_type: formData.get('userType') || 'public',
-      location: formData.get('location'),
-      phone_number: formData.get('phoneNumber') || '',
-      organization: formData.get('organization') || ''
+      user_type: 'public', // Default to public user type for citizens
+      username: formData.get('email')?.toString().split('@')[0] || ''
     }
 
     try {
@@ -70,90 +68,78 @@ export default function RegisterForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <div>
-        <Input
-          name="username"
-          type="text"
-          placeholder="Username"
-          required
-        />
+    <div className="mx-auto w-full max-w-md space-y-6 rounded-lg border bg-background p-6 shadow-lg">
+      <div className="space-y-2 text-center">
+        <h3 className="text-2xl font-bold">Join HurriNet as a Citizen</h3>
+        <p className="text-sm text-muted-foreground">
+          Create your account to receive alerts and stay prepared during hurricane season
+        </p>
       </div>
-      <div>
-        <Input
-          name="email"
-          type="email"
-          placeholder="Email"
-          required
-        />
-      </div>
-      <div>
-        <Input
-          name="password"
-          type="password"
-          placeholder="Password"
-          required
-        />
-      </div>
-      <div>
-        <Input
-          name="firstName"
-          type="text"
-          placeholder="First Name"
-          required
-        />
-      </div>
-      <div>
-        <Input
-          name="lastName"
-          type="text"
-          placeholder="Last Name"
-          required
-        />
-      </div>
-      <div>
-        <Select name="userType" defaultValue="public">
-          <SelectTrigger>
-            <SelectValue placeholder="Select User Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="public">Public User</SelectItem>
-            <SelectItem value="emergency_responder">Emergency Responder</SelectItem>
-            <SelectItem value="coordinator">Emergency Coordinator</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div>
-        <Input
-          name="location"
-          type="text"
-          placeholder="Location"
-          required
-        />
-      </div>
-      <div>
-        <Input
-          name="phoneNumber"
-          type="tel"
-          placeholder="Phone Number (optional)"
-        />
-      </div>
-      <div>
-        <Input
-          name="organization"
-          type="text"
-          placeholder="Organization (optional)"
-        />
-      </div>
-      {error && (
-        <div className="text-red-500 text-sm">
-          {error}
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="Enter your email address"
+            required
+          />
         </div>
-      )}
-      <Button type="submit" disabled={isLoading}>
-        {isLoading ? 'Registering...' : 'Register'}
-      </Button>
-    </form>
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            placeholder="Create a secure password"
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="firstName">First Name</Label>
+          <Input
+            id="firstName"
+            name="firstName"
+            type="text"
+            placeholder="Enter your first name"
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="lastName">Last Name</Label>
+          <Input
+            id="lastName"
+            name="lastName"
+            type="text"
+            placeholder="Enter your last name"
+            required
+          />
+        </div>
+        {error && (
+          <div className="text-red-500 text-sm">
+            {error}
+          </div>
+        )}
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading ? 'Creating your account...' : 'Create Citizen Account'}
+        </Button>
+      </form>
+      <div className="mt-4 text-center text-sm">
+        <p>Already have an account?{" "}
+          <a href="/auth/login" className="text-primary hover:underline">
+            Log in
+          </a>
+        </p>
+      </div>
+      <div className="mt-4 text-center text-xs text-muted-foreground">
+        <p>Are you an emergency responder or coordinator?{" "}
+          <a href="/contact" className="text-primary hover:underline">
+            Contact NEMO
+          </a>
+        </p>
+      </div>
+    </div>
   )
 }
 
