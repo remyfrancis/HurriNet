@@ -20,5 +20,6 @@ export interface Resource {
     currentCount?: number;
     lastUpdate: string;
     contact?: string;
+    currentWorkload?: number;
 }
 

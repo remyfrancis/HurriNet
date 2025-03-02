@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import { HomeIcon, UsersIcon, SettingsIcon, BellIcon } from "lucide-react";
+import { Stethoscope, Siren, Users2, Boxes, UsersIcon, SettingsIcon, BellIcon, HeartHandshake } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar/index"
 import { AlertProvider } from "@/contexts/AlertContext"
 import { SupplierUpdatesProvider } from "@/contexts/SupplierUpdatesContext";
@@ -24,16 +24,22 @@ export const metadata: Metadata = {
 
 const sidebarItems = [
   {
+    key: "hq-dashboard",
+    title: "HQ Dashboard",
+    href: "/emergency-hq",
+    icon: <Users2 className="w-4 h-4" />,
+  },
+  {
     key: "citizen-dashboard",
     title: "Citizen Dashboard",
     href: "/citizen-dashboard",
-    icon: <UsersIcon className="w-4 h-4" />,
+    icon: <Users2 className="w-4 h-4" />,
   },
   {
     key: "emergency-personnel-dashboard",
     title: "Emergency Personnel Dashboard",
     href: "/emergency-personnel-dashboard",
-    icon: <UsersIcon className="w-4 h-4" />,
+    icon: <Siren className="w-4 h-4" />,
     items: [
       {
         key: "incident-status",
@@ -56,7 +62,7 @@ const sidebarItems = [
     key: "medical-dashboard",
     title: "Medical Dashboard",
     href: "/medical-dashboard",
-    icon: <UsersIcon className="w-4 h-4" />,
+    icon: <Stethoscope className="w-4 h-4" />,
     items: [
       {
         key: "facilities",
@@ -84,7 +90,7 @@ const sidebarItems = [
     key: "resource-management",
     title: "Resource Manager Dashboard",
     href: "/resource-manager-dashboard",
-    icon: <UsersIcon className="w-4 h-4" />,
+    icon: <Boxes className="w-4 h-4" />,
     items: [
       {
         key: "distribution",
@@ -113,45 +119,12 @@ const sidebarItems = [
       },
     ],
   },
-  {
-    key: "volunteer-dashboard",
-    title: "Volunteer Dashboard",
-    href: "/volunteer-dashboard",
-    icon: <UsersIcon className="w-4 h-4" />,
-    items: [
-      {
-        key: "report-incident",
-        title: "Report Incident",
-        href: "/volunteer-dashboard/report-incident",
-      },
-    ],
-  },
-  {
-    key: "system-admin-dashboard",
-    title: "System Admin Dashboard",
-    href: "/system-admin-dashboard",
-    icon: <UsersIcon className="w-4 h-4" />,
-    items: [
-      {
-        key: "system-settings",
-        title: "System Settings",
-        href: "/admin-dashboard/settings",
-        icon: <SettingsIcon className="w-4 h-4" />
-      },
-    ],
-  },
-  {
-    key: "system-settings",
-    title: "System Settings",
-    href: "/admin/settings",
-    icon: <SettingsIcon className="w-4 h-4" />
-  },
-  {
-    key: "alert-management",
-    title: "Alert Management",
-    href: "/admin/alerts",
-    icon: <BellIcon className="w-4 h-4" />
-  }
+  // {
+  //   key: "alert-management",
+  //   title: "Alert Management",
+  //   href: "/admin/alerts",
+  //   icon: <BellIcon className="w-4 h-4" />
+  // }
 ]
 
 

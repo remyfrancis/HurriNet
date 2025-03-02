@@ -19,25 +19,54 @@ type Facility = {
   capacity: number
   current_occupancy: number
   status: string
+  last_updated: string
 }
 
 const FACILITY_TYPES = [
-  "general_hospital",
-  "private_hospital", 
-  "community_hospital",
-  "clinic",
-  "mobile_unit"
+  'general_hospital',
+  'private_hospital',
+  'community_hospital',
+  'clinic',
+  'mobile_unit'
 ]
 
 const FACILITY_TYPE_LABELS: Record<string, string> = {
-  "general_hospital": "General Hospital",
-  "private_hospital": "Private Hospital",
-  "community_hospital": "Community Hospital",
-  "clinic": "Clinic",
-  "mobile_unit": "Mobile Unit"
+  'general_hospital': 'General Hospital',
+  'private_hospital': 'Private Hospital',
+  'community_hospital': 'Community Hospital',
+  'clinic': 'Clinic',
+  'mobile_unit': 'Mobile Unit'
 }
 
-const FACILITY_STATUSES = ["Operational", "Under Maintenance", "Closed", "Emergency Only"]
+const FACILITY_STATUS_LABELS: Record<string, string> = {
+  'operational': 'Operational',
+  'closed': 'Closed',
+  'under_maintenance': 'Under Maintenance',
+  'emergency_only': 'Emergency Only'
+}
+
+const FACILITY_STATUSES = [
+  'operational',
+  'closed',
+  'under_maintenance',
+  'emergency_only'
+]
+
+const formatDateTime = (dateString: string | undefined) => {
+  if (!dateString) return 'Never'
+  try {
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch (error) {
+    console.error('Error formatting date:', error)
+    return 'Invalid Date'
+  }
+}
 
 export default function MedicalFacilities() {
   const [facilities, setFacilities] = useState<Facility[]>([])
@@ -69,21 +98,34 @@ export default function MedicalFacilities() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
+      const payload = {
+        name: formData.name || '',
+        facility_type: formData.facility_type || 'general_hospital',
+        location: formData.location || '',
+        capacity: parseInt(formData.capacity?.toString() || '0'),
+        current_occupancy: parseInt(formData.current_occupancy?.toString() || '0'),
+        status: formData.status || 'operational'
+      }
+
       const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/medical/facilities/${editingFacility ? `${editingFacility.id}/` : ''}`
       const method = editingFacility ? 'PUT' : 'POST'
       
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       })
       
-      if (response.ok) {
-        setIsDialogOpen(false)
-        setEditingFacility(null)
-        setFormData({})
-        fetchFacilities()
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('Server error:', errorData)
+        throw new Error('Failed to save facility')
       }
+
+      setIsDialogOpen(false)
+      setEditingFacility(null)
+      setFormData({})
+      fetchFacilities()
     } catch (error) {
       console.error('Error saving facility:', error)
     }
@@ -175,7 +217,9 @@ export default function MedicalFacilities() {
                     </SelectTrigger>
                     <SelectContent>
                       {FACILITY_STATUSES.map(status => (
-                        <SelectItem key={status} value={status}>{status}</SelectItem>
+                        <SelectItem key={status} value={status}>
+                          {FACILITY_STATUS_LABELS[status]}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -244,7 +288,7 @@ export default function MedicalFacilities() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {facilities.filter(facility => facility.status === "Operational").length}
+              {facilities.filter(facility => facility.status === "operational").length}
             </div>
           </CardContent>
         </Card>
@@ -275,8 +319,8 @@ export default function MedicalFacilities() {
                   <TableCell>{facility.capacity}</TableCell>
                   <TableCell>{facility.current_occupancy}</TableCell>
                   <TableCell>
-                    <Badge variant={facility.status === "Operational" ? "default" : "secondary"}>
-                      {facility.status}
+                    <Badge variant={facility.status === "operational" ? "success" : "destructive"}>
+                      {FACILITY_STATUS_LABELS[facility.status]}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -295,6 +339,13 @@ export default function MedicalFacilities() {
           </Table>
         </CardContent>
       </Card>
+
+      <div className="text-right text-sm text-muted-foreground mt-4">
+        Last Updated: {facilities.length > 0 && facilities[0].last_updated ? 
+          formatDateTime(facilities[0].last_updated) : 
+          'Never'
+        }
+      </div>
     </div>
   )
 }

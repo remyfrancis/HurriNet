@@ -28,6 +28,8 @@ import {
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowUp, ArrowDown, MapPin, Users } from 'lucide-react'
+import PlanDeliveryRoutes from '@/components/Resources/PlanDeliveryRoutes'
+import AssignTransportTeams from '@/components/Resources/AssignTransportTeams'
 
 // Mock data for demonstration
 const mockRequests = [
@@ -145,7 +147,8 @@ export default function DistributionManagement() {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
+        <PlanDeliveryRoutes />
+        {/* <Card>
           <CardHeader>
             <CardTitle>Plan Delivery Routes</CardTitle>
             <CardDescription>Create and manage delivery routes</CardDescription>
@@ -216,9 +219,9 @@ export default function DistributionManagement() {
               </TableBody>
             </Table>
           </CardContent>
-        </Card>
-
-        <Card>
+        </Card> */}
+        <AssignTransportTeams />
+        {/* <Card>
           <CardHeader>
             <CardTitle>Assign Transport Teams</CardTitle>
             <CardDescription>Manage transport teams and assign them to routes</CardDescription>
@@ -256,7 +259,7 @@ export default function DistributionManagement() {
               </TableBody>
             </Table>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
     </div>
   )

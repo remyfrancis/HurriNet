@@ -114,4 +114,32 @@
   }
 }
 
+.shelter-marker {
+  border-radius: 50%;
+  padding: 4px;
+}
 
+.shelter-marker.open {
+  color: #22c55e;
+}
+
+.shelter-marker.closed {
+  color: #ef4444;
+}
+
+.alert-marker {
+  border-radius: 50%;
+  padding: 4px;
+}
+
+.alert-marker.high {
+  color: #ef4444;
+}
+
+.alert-marker.medium {
+  color: #f59e0b;
+}
+
+.alert-marker.low {
+  color: #3b82f6;
+}
