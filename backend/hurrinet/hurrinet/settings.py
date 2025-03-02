@@ -48,12 +48,13 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "corsheaders",
-    "incidents",
-    "alerts",
-    "rest_framework_simplejwt",
-    "resource_management",
     "accounts.apps.AccountsConfig",
     "chats",
+    "incidents",
+    "weather",
+    "feed",
+    "alerts",
+    "resource_management",
 ]
 
 # Add JWT settings
