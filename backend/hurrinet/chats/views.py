@@ -9,6 +9,7 @@ from rest_framework import viewsets, status, mixins
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
 from django.db.models import Q
 from django.utils import timezone
 from .models import ChatSession, ChatMessage
@@ -103,17 +104,26 @@ class ChatMessageViewSet(
 
     def get_queryset(self):
         """Get messages for a specific chat session."""
+        user = self.request.user
         session_id = self.request.query_params.get("session")
+
+        # Base queryset
+        queryset = ChatMessage.objects.all()
+
+        # Filter by session if provided
         if session_id:
-            return ChatMessage.objects.filter(session_id=session_id)
-        return ChatMessage.objects.none()
+            queryset = queryset.filter(session_id=session_id)
+
+        # Filter to only show messages from sessions where the user is a participant
+        return queryset.filter(
+            Q(session__initiator=user) | Q(session__recipient=user)
+        ).order_by("created_at")
 
     def perform_create(self, serializer):
         """Create a new message and set the sender."""
         chat_session = serializer.validated_data["session"]
-        if chat_session.can_participate(self.request.user):
-            serializer.save(sender=self.request.user)
-        else:
-            raise PermissionError(
+        if not chat_session.can_participate(self.request.user):
+            raise PermissionDenied(
                 "Not authorized to send messages in this chat session"
             )
+        serializer.save(sender=self.request.user)
