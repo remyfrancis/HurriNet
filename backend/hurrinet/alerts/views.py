@@ -1,7 +1,6 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, permissions
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
 from .models import Alert
 from .serializers import AlertSerializer
 
@@ -9,15 +8,17 @@ from .serializers import AlertSerializer
 class AlertViewSet(viewsets.ModelViewSet):
     queryset = Alert.objects.all()
     serializer_class = AlertSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         queryset = Alert.objects.all()
+        if not self.request.user.is_staff:
+            queryset = queryset.filter(is_public=True)
 
         # Filter by active status
         active = self.request.query_params.get("active", None)
         if active is not None:
-            queryset = queryset.filter(active=active.lower() == "true")
+            queryset = queryset.filter(is_active=active.lower() == "true")
 
         # Filter by district
         district = self.request.query_params.get("district", None)
@@ -33,7 +34,7 @@ class AlertViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"])
     def current(self, request):
         """Get all currently active alerts."""
-        active_alerts = Alert.objects.filter(active=True).order_by("-created_at")
+        active_alerts = Alert.objects.filter(is_active=True).order_by("-created_at")
         serializer = self.get_serializer(active_alerts, many=True)
         return Response(serializer.data)
 

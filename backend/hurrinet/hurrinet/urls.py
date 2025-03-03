@@ -35,4 +35,9 @@ urlpatterns = [
     path("api/auth/", include("accounts.urls")),
     path("api/chats/", include("chats.urls")),
     path("api/resource-management/", include("resource_management.urls")),
+    path("api/weather/", include("weather.urls")),
+    path("api/alerts/", include("alerts.urls")),
+    path("api/incidents/", include("incidents.urls")),
+    path("api/shelters/", include("shelters.urls")),
+    path("api/social/", include("social.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

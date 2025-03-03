@@ -1,13 +1,15 @@
 from django.db import models
-from django.utils import timezone
-from django.conf import settings
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class Alert(models.Model):
     SEVERITY_CHOICES = [
-        ("High", "High"),
-        ("Medium", "Medium"),
-        ("Low", "Low"),
+        ("LOW", "Low"),
+        ("MODERATE", "Moderate"),
+        ("HIGH", "High"),
+        ("EXTREME", "Extreme"),
     ]
 
     DISTRICT_CHOICES = [
@@ -24,22 +26,25 @@ class Alert(models.Model):
         ("All", "All Districts"),  # For alerts that affect the entire country
     ]
 
-    title = models.CharField(max_length=200)
-    type = models.CharField(max_length=100)
+    title = models.CharField(max_length=255)
+    description = models.TextField(default="No description provided")
     severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES)
     district = models.CharField(max_length=20, choices=DISTRICT_CHOICES, default="All")
-    active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(default=timezone.now)
-    updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name="created_alerts",
+        User,
+        on_delete=models.CASCADE,
+        related_name="alerts",
+        default=1,  # Default to the first user (usually superuser)
     )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+    is_public = models.BooleanField(default=True)
+    affected_areas = models.TextField(blank=True)
+    instructions = models.TextField(blank=True)
 
     def __str__(self):
-        return f"{self.title} - {self.district} ({self.severity})"
+        return f"{self.title} - {self.get_severity_display()} - {self.district}"
 
     class Meta:
         ordering = ["-created_at"]

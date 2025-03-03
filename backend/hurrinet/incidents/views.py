@@ -4,11 +4,10 @@ Views for incident reporting in HurriNet.
 This module provides views for managing incidents, updates, and flags.
 """
 
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
 from django.db.models import Q
 from .models import Incident, IncidentUpdate, IncidentFlag
@@ -43,7 +42,9 @@ class IncidentViewSet(viewsets.ModelViewSet):
     - Flagging incidents
     """
 
-    permission_classes = [IsAuthenticated, IsReporterOrReadOnly]
+    queryset = Incident.objects.all()
+    serializer_class = IncidentSerializer
+    permission_classes = [permissions.IsAuthenticated]
     filterset_fields = [
         "incident_type",
         "severity",
@@ -57,7 +58,10 @@ class IncidentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Get active incidents."""
-        return Incident.objects.filter(is_active=True)
+        queryset = Incident.objects.all()
+        if not self.request.user.is_staff:
+            queryset = queryset.filter(created_by=self.request.user)
+        return queryset
 
     def get_serializer_class(self):
         """Return appropriate serializer based on the action."""
@@ -201,6 +205,22 @@ class IncidentViewSet(viewsets.ModelViewSet):
         return Response(
             {"error": "Not implemented"}, status=status.HTTP_501_NOT_IMPLEMENTED
         )
+
+    @action(detail=True, methods=["post"])
+    def resolve(self, request, pk=None):
+        incident = self.get_object()
+        if not request.user.is_staff:
+            return Response(
+                {"error": "Only staff members can resolve incidents"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        incident.is_resolved = True
+        incident.resolved_by = request.user
+        incident.save()
+
+        serializer = self.get_serializer(incident)
+        return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
         """Create a new incident."""

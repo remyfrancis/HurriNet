@@ -79,65 +79,50 @@ class IncidentFlagSerializer(serializers.ModelSerializer):
         )
 
 
-class IncidentSerializer(serializers.ModelSerializer):
-    """Serializer for incidents with detailed information."""
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["id", "username", "email"]
 
-    reported_by = UserBriefSerializer(read_only=True)
-    verified_by = UserBriefSerializer(read_only=True)
-    assigned_to = UserBriefSerializer(read_only=True)
-    incident_type_display = serializers.CharField(
-        source="get_incident_type_display", read_only=True
-    )
-    severity_display = serializers.CharField(
-        source="get_severity_display", read_only=True
-    )
-    status_display = serializers.CharField(source="get_status_display", read_only=True)
-    updates = IncidentUpdateSerializer(many=True, read_only=True)
-    flags = IncidentFlagSerializer(many=True, read_only=True)
-    attachment_url = serializers.SerializerMethodField()
+
+class IncidentSerializer(serializers.ModelSerializer):
+    created_by = UserSerializer(read_only=True)
+    resolved_by = UserSerializer(read_only=True)
+    photo_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Incident
-        fields = (
+        fields = [
             "id",
             "title",
             "description",
-            "incident_type",
-            "incident_type_display",
-            "severity",
-            "severity_display",
-            "status",
-            "status_display",
             "location",
-            "latitude",
-            "longitude",
-            "reported_by",
-            "verified_by",
-            "assigned_to",
+            "incident_type",
+            "severity",
+            "photo_url",
+            "created_by",
+            "created_at",
+            "updated_at",
+            "is_resolved",
+            "resolved_at",
+            "resolved_by",
+        ]
+        read_only_fields = [
+            "created_by",
             "created_at",
             "updated_at",
             "resolved_at",
-            "attachment",
-            "attachment_url",
-            "is_active",
-            "updates",
-            "flags",
-        )
-        read_only_fields = (
-            "reported_by",
-            "verified_by",
-            "assigned_to",
-            "resolved_at",
-            "is_active",
-        )
+            "resolved_by",
+        ]
 
-    def get_attachment_url(self, obj):
-        """Get the full URL for the attachment if it exists."""
-        if obj.attachment:
-            request = self.context.get("request")
-            if request:
-                return request.build_absolute_uri(obj.attachment.url)
+    def get_photo_url(self, obj):
+        if obj.photo:
+            return self.context["request"].build_absolute_uri(obj.photo.url)
         return None
+
+    def create(self, validated_data):
+        validated_data["created_by"] = self.context["request"].user
+        return super().create(validated_data)
 
 
 class IncidentCreateSerializer(serializers.ModelSerializer):
