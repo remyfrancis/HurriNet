@@ -7,6 +7,12 @@ current conditions and forecasts.
 
 from django.db import models
 from django.utils import timezone
+import requests
+from django.conf import settings
+from datetime import datetime, timedelta
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class WeatherData(models.Model):
@@ -41,6 +47,63 @@ class WeatherData(models.Model):
     def __str__(self):
         return f"{self.conditions} at {self.location} ({self.timestamp})"
 
+    @classmethod
+    def fetch_from_tomorrow(cls, lat=13.9094, lng=-60.9789, location="Saint Lucia"):
+        """Fetch weather data from Tomorrow.io API."""
+        api_key = settings.TOMORROW_API_KEY
+        logger.info(
+            f"Using Tomorrow.io API key: {api_key[:5]}..."
+        )  # Only log first 5 chars for security
+
+        # Construct URL with parameters directly
+        url = f"https://api.tomorrow.io/v4/weather/realtime?location={lat},{lng}&apikey={api_key}&fields=temperature,humidity,windSpeed,windDirection,pressure,visibility,precipitationProbability"
+
+        try:
+            logger.info(f"Making request to Tomorrow.io API for {location}")
+            logger.info(f"Request URL: {url}")
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()
+            logger.info("Successfully received response from Tomorrow.io API")
+
+            # Map Tomorrow.io conditions to our choices
+            condition_mapping = {
+                "clear": "SUNNY",
+                "partlyCloudy": "PARTLY_CLOUDY",
+                "cloudy": "CLOUDY",
+                "rain": "RAIN",
+                "storm": "STORM",
+                "hurricane": "HURRICANE",
+            }
+
+            weather_data = {
+                "temperature": data["data"]["values"]["temperature"],
+                "feels_like": data["data"]["values"].get(
+                    "temperatureApparent", data["data"]["values"]["temperature"]
+                ),
+                "humidity": data["data"]["values"]["humidity"],
+                "wind_speed": data["data"]["values"]["windSpeed"],
+                "wind_direction": data["data"]["values"]["windDirection"],
+                "conditions": condition_mapping.get(
+                    data["data"]["values"].get("cloudCover", "clear"), "SUNNY"
+                ),
+                "pressure": data["data"]["values"]["pressure"],
+                "visibility": data["data"]["values"]["visibility"],
+                "location": location,
+                "latitude": lat,
+                "longitude": lng,
+            }
+
+            weather = cls.objects.create(**weather_data)
+            logger.info(f"Successfully created weather data for {location}")
+            return weather
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error making request to Tomorrow.io API: {str(e)}")
+            return None
+        except Exception as e:
+            logger.error(f"Error processing weather data: {str(e)}", exc_info=True)
+            return None
+
 
 class WeatherForecast(models.Model):
     """Model for storing weather forecasts."""
@@ -62,6 +125,81 @@ class WeatherForecast(models.Model):
 
     def __str__(self):
         return f"Forecast for {self.location} on {self.date}"
+
+    @classmethod
+    def fetch_from_tomorrow(cls, lat=13.9094, lng=-60.9789, location="Saint Lucia"):
+        """Fetch weather forecast from Tomorrow.io API."""
+        api_key = settings.TOMORROW_API_KEY
+        logger.info(
+            f"Using Tomorrow.io API key: {api_key[:5]}..."
+        )  # Only log first 5 chars for security
+
+        # Construct URL with parameters directly
+        url = f"https://api.tomorrow.io/v4/weather/forecast?location={lat},{lng}&apikey={api_key}&timesteps=1d&fields=temperature,humidity,windSpeed,precipitationProbability"
+
+        try:
+            logger.info(f"Making request to Tomorrow.io API for forecast in {location}")
+            logger.info(f"Request URL: {url}")
+            response = requests.get(url)
+            response.raise_for_status()
+            data = response.json()
+            logger.info("Successfully received forecast response from Tomorrow.io API")
+
+            # Log the response structure for debugging
+            logger.info(f"Response data structure: {data}")
+
+            forecasts = []
+            for daily in data["timelines"]["daily"][:7]:  # Get 7 days forecast
+                date = datetime.strptime(daily["time"], "%Y-%m-%dT%H:%M:%SZ").date()
+
+                # Map Tomorrow.io conditions to our choices
+                condition_mapping = {
+                    "clear": "SUNNY",
+                    "partlyCloudy": "PARTLY_CLOUDY",
+                    "cloudy": "CLOUDY",
+                    "rain": "RAIN",
+                    "storm": "STORM",
+                    "hurricane": "HURRICANE",
+                }
+
+                # Get the values from the response
+                values = daily["values"]
+                forecast_data = {
+                    "date": date,
+                    "high_temp": values.get(
+                        "temperatureMax", values.get("temperature")
+                    ),  # Fallback to temperature if max not available
+                    "low_temp": values.get(
+                        "temperatureMin", values.get("temperature")
+                    ),  # Fallback to temperature if min not available
+                    "conditions": condition_mapping.get(
+                        values.get("cloudCover", "clear"), "SUNNY"
+                    ),
+                    "precipitation_chance": values.get(
+                        "precipitationProbability", 0
+                    ),  # Default to 0 if not available
+                    "wind_speed": values.get(
+                        "windSpeed", 0
+                    ),  # Default to 0 if not available
+                    "humidity": values.get(
+                        "humidity", 0
+                    ),  # Default to 0 if not available
+                    "location": location,
+                }
+
+                forecast, created = cls.objects.update_or_create(
+                    date=date, location=location, defaults=forecast_data
+                )
+                forecasts.append(forecast)
+                logger.info(f"Created/updated forecast for {date} in {location}")
+
+            return forecasts
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error making request to Tomorrow.io API: {str(e)}")
+            return []
+        except Exception as e:
+            logger.error(f"Error processing forecast data: {str(e)}", exc_info=True)
+            return []
 
 
 class WeatherAlert(models.Model):

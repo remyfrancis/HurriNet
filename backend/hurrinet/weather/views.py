@@ -11,12 +11,15 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
+import logging
 from .models import WeatherData, WeatherForecast, WeatherAlert
 from .serializers import (
     WeatherDataSerializer,
     WeatherForecastSerializer,
     WeatherAlertSerializer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class WeatherViewSet(viewsets.ReadOnlyModelViewSet):
@@ -57,7 +60,12 @@ class WeatherViewSet(viewsets.ReadOnlyModelViewSet):
     def current(self, request):
         """Get current weather conditions."""
         try:
-            weather = WeatherData.objects.latest()
+            # Fetch fresh data from Tomorrow.io
+            weather = WeatherData.fetch_from_tomorrow()
+            if not weather:
+                # If fetch fails, get latest from database
+                weather = WeatherData.objects.latest()
+
             serializer = self.get_serializer(weather)
             return Response(serializer.data)
         except WeatherData.DoesNotExist:
@@ -68,9 +76,32 @@ class WeatherViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=False, methods=["get"])
     def forecast(self, request):
         """Get weather forecast for the next 7 days."""
-        forecasts = self.get_queryset()
-        serializer = self.get_serializer(forecasts, many=True)
-        return Response(serializer.data)
+        try:
+            # Fetch fresh forecast from Tomorrow.io
+            logger.info("Fetching forecast from Tomorrow.io")
+            forecasts = WeatherForecast.fetch_from_tomorrow()
+
+            if not forecasts:
+                logger.warning(
+                    "No forecasts returned from Tomorrow.io, falling back to database"
+                )
+                # If fetch fails, get from database
+                forecasts = self.get_queryset()
+                if not forecasts.exists():
+                    logger.warning("No forecasts found in database")
+                    return Response(
+                        {"error": "No weather forecast available"},
+                        status=status.HTTP_404_NOT_FOUND,
+                    )
+
+            serializer = self.get_serializer(forecasts, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            logger.error(f"Error in forecast endpoint: {str(e)}", exc_info=True)
+            return Response(
+                {"error": "Failed to fetch weather forecast"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     @action(detail=False, methods=["get"])
     def alerts(self, request):
@@ -84,6 +115,7 @@ class WeatherViewSet(viewsets.ReadOnlyModelViewSet):
         """Get weather data for a specific location."""
         lat = request.query_params.get("lat")
         lng = request.query_params.get("lng")
+        location = request.query_params.get("location", "Saint Lucia")
 
         if not lat or not lng:
             return Response(
@@ -92,7 +124,16 @@ class WeatherViewSet(viewsets.ReadOnlyModelViewSet):
             )
 
         try:
-            weather = WeatherData.objects.filter(latitude=lat, longitude=lng).latest()
+            # Fetch fresh data from Tomorrow.io for the location
+            weather = WeatherData.fetch_from_tomorrow(
+                lat=float(lat), lng=float(lng), location=location
+            )
+            if not weather:
+                # If fetch fails, get latest from database
+                weather = WeatherData.objects.filter(
+                    latitude=lat, longitude=lng
+                ).latest()
+
             serializer = WeatherDataSerializer(weather)
             return Response(serializer.data)
         except WeatherData.DoesNotExist:

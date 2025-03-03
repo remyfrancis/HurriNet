@@ -23,6 +23,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Get Tomorrow API key from environment variable
 TOMORROW_API_KEY = os.getenv("TOMORROW_API_KEY")
+if not TOMORROW_API_KEY:
+    raise ValueError("TOMORROW_API_KEY environment variable is not set")
 
 
 # Quick-start development settings - unsuitable for production
