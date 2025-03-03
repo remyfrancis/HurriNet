@@ -136,7 +136,11 @@ class IncidentCreateSerializer(serializers.ModelSerializer):
             "incident_type",
             "severity",
             "location",
-            "latitude",
-            "longitude",
-            "attachment",
+            "photo",
         )
+
+    def create(self, validated_data):
+        # Get the user from the request context
+        user = self.context["request"].user
+        # Create the incident with the user as created_by
+        return Incident.objects.create(created_by=user, **validated_data)

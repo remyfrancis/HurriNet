@@ -70,8 +70,8 @@ class IncidentViewSet(viewsets.ModelViewSet):
         return IncidentSerializer
 
     def perform_create(self, serializer):
-        """Create a new incident and set the reporter."""
-        return serializer.save(reported_by=self.request.user)
+        """Create a new incident."""
+        return serializer.save()
 
     @action(detail=True, methods=["post"])
     def update_status(self, request, pk=None):
@@ -225,10 +225,6 @@ class IncidentViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         """Create a new incident."""
         try:
-            # Debug print
-            print("Received data:", request.data)
-            print("Files:", request.FILES)
-
             # Create incident data
             data = {
                 "title": request.data.get("title"),
@@ -236,34 +232,20 @@ class IncidentViewSet(viewsets.ModelViewSet):
                 "incident_type": request.data.get("incident_type"),
                 "severity": request.data.get("severity"),
                 "location": request.data.get("location"),
-                "latitude": request.data.get("latitude"),
-                "longitude": request.data.get("longitude"),
             }
 
-            # Handle file attachment if present
-            if "attachment" in request.FILES:
-                data["attachment"] = request.FILES["attachment"]
+            # Handle photo if present
+            if "photo" in request.FILES:
+                data["photo"] = request.FILES["photo"]
 
             # Use IncidentCreateSerializer for validation and creation
-            create_serializer = self.get_serializer(data=data)
-            create_serializer.is_valid(raise_exception=True)
-            instance = self.perform_create(create_serializer)
-
-            # Use IncidentSerializer for the response
-            response_serializer = IncidentSerializer(
-                instance, context={"request": request}
-            )
-            headers = self.get_success_headers(response_serializer.data)
+            serializer = self.get_serializer(data=data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
             return Response(
-                response_serializer.data,
-                status=status.HTTP_201_CREATED,
-                headers=headers,
+                serializer.data, status=status.HTTP_201_CREATED, headers=headers
             )
-
         except Exception as e:
-            print("Error:", str(e))  # Debug print
-            print("Traceback:", e.__traceback__)  # Debug print
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            print("Error:", str(e))
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
