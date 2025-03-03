@@ -1,6 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from .models import Alert
 from .serializers import AlertSerializer
 
@@ -8,6 +9,7 @@ from .serializers import AlertSerializer
 class AlertViewSet(viewsets.ModelViewSet):
     queryset = Alert.objects.all()
     serializer_class = AlertSerializer
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         queryset = Alert.objects.all()
@@ -23,6 +25,10 @@ class AlertViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(district=district)
 
         return queryset
+
+    def perform_create(self, serializer):
+        """Set the creator when creating a new alert."""
+        serializer.save(created_by=self.request.user)
 
     @action(detail=False, methods=["get"])
     def current(self, request):
