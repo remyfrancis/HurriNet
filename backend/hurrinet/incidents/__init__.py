@@ -1,0 +1,3 @@
+"""
+Incidents package for HurriNet.
+"""

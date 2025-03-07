@@ -1,16 +1,16 @@
 import { cookies } from 'next/headers'
 
-export function getAuthToken() {
-  const cookieStore = cookies()
+export async function getAuthToken() {
+  const cookieStore = await cookies()
   return cookieStore.get('accessToken')?.value
 }
 
-export function isAuthenticated() {
-  return !!getAuthToken()
+export async function isAuthenticated() {
+  return !!(await getAuthToken())
 }
 
 export async function getCurrentUser() {
-  const token = getAuthToken()
+  const token = await getAuthToken()
   
   if (!token) {
     return null
