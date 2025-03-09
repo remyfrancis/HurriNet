@@ -5,6 +5,7 @@ This module provides serializers for converting incident models to/from JSON.
 """
 
 from rest_framework import serializers
+from rest_framework_gis.serializers import GeoFeatureModelSerializer
 from django.contrib.auth import get_user_model
 from .models import Incident, IncidentUpdate, IncidentFlag
 
@@ -85,18 +86,22 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ["id", "username", "email"]
 
 
-class IncidentSerializer(serializers.ModelSerializer):
+class IncidentSerializer(GeoFeatureModelSerializer):
+    """Serializer for incidents with spatial data support."""
+
     created_by = UserSerializer(read_only=True)
     resolved_by = UserSerializer(read_only=True)
     photo_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Incident
+        geo_field = "location"
         fields = [
             "id",
             "title",
             "description",
             "location",
+            "affected_area",
             "incident_type",
             "severity",
             "photo_url",
@@ -120,22 +125,20 @@ class IncidentSerializer(serializers.ModelSerializer):
             return self.context["request"].build_absolute_uri(obj.photo.url)
         return None
 
-    def create(self, validated_data):
-        validated_data["created_by"] = self.context["request"].user
-        return super().create(validated_data)
 
-
-class IncidentCreateSerializer(serializers.ModelSerializer):
-    """Serializer for creating incidents."""
+class IncidentCreateSerializer(GeoFeatureModelSerializer):
+    """Serializer for creating incidents with spatial data."""
 
     class Meta:
         model = Incident
+        geo_field = "location"
         fields = (
             "title",
             "description",
             "incident_type",
             "severity",
             "location",
+            "affected_area",
             "photo",
         )
 
@@ -144,3 +147,25 @@ class IncidentCreateSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
         # Create the incident with the user as created_by
         return Incident.objects.create(created_by=user, **validated_data)
+
+    def validate_location(self, value):
+        """Validate the location GeoJSON data."""
+        if not value or not isinstance(value, dict):
+            raise serializers.ValidationError("Location data is required")
+
+        if value.get("type") != "Point":
+            raise serializers.ValidationError("Location must be a GeoJSON Point")
+
+        coordinates = value.get("coordinates")
+        if not coordinates or len(coordinates) != 2:
+            raise serializers.ValidationError(
+                "Location must have valid coordinates [longitude, latitude]"
+            )
+
+        longitude, latitude = coordinates
+        if not (-180 <= longitude <= 180) or not (-90 <= latitude <= 90):
+            raise serializers.ValidationError(
+                "Invalid coordinates. Longitude must be between -180 and 180, latitude between -90 and 90"
+            )
+
+        return value

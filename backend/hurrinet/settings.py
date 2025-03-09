@@ -1,4 +1,4 @@
-# Add 'channels' to INSTALLED_APPS
+# Add 'django.contrib.gis' to INSTALLED_APPS
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -6,11 +6,25 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.gis",  # Add GeoDjango
     "rest_framework",
+    "rest_framework_gis",  # Add DRF GIS support
     "corsheaders",
     "channels",
     "incidents.apps.IncidentsConfig",
 ]
+
+# Database configuration for PostGIS
+DATABASES = {
+    "default": {
+        "ENGINE": "django.contrib.gis.db.backends.postgis",
+        "NAME": "hurrinet_db",
+        "USER": "postgres",
+        "PASSWORD": "postgres",  # Change this to your actual password
+        "HOST": "localhost",
+        "PORT": "5432",
+    }
+}
 
 # Root URL Configuration
 ROOT_URLCONF = "hurrinet.urls"

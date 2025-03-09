@@ -222,26 +222,73 @@ class IncidentViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(incident)
         return Response(serializer.data)
 
+    @action(detail=False, methods=["get"])
+    def check_updates(self, request):
+        """Check for incident updates since a given timestamp."""
+        timestamp = request.query_params.get("since")
+        if not timestamp:
+            return Response(
+                {"error": "Missing 'since' parameter"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            # Query only incidents updated after the given timestamp
+            updated_incidents = Incident.objects.filter(
+                updated_at__gt=timestamp
+            ).order_by("-updated_at")
+
+            serializer = self.get_serializer(updated_incidents, many=True)
+            return Response(
+                {"updates": serializer.data, "timestamp": timezone.now().isoformat()}
+            )
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
     def create(self, request, *args, **kwargs):
         """Create a new incident."""
         try:
+            # Log incoming data
+            print("Received data:", request.data)
+            print("Files:", request.FILES)
+
+            # Parse location data
+            location_data = request.data.get("location")
+            if isinstance(location_data, str):
+                try:
+                    import json
+
+                    location_data = json.loads(location_data)
+                except json.JSONDecodeError:
+                    return Response(
+                        {"error": "Invalid location data format"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
             # Create incident data
             data = {
                 "title": request.data.get("title"),
                 "description": request.data.get("description"),
                 "incident_type": request.data.get("incident_type"),
                 "severity": request.data.get("severity"),
-                "location": request.data.get("location"),
+                "location": location_data,
             }
+
+            print("Processed data:", data)
 
             # Handle photo if present
             if "photo" in request.FILES:
                 data["photo"] = request.FILES["photo"]
 
             # Use IncidentCreateSerializer for validation and creation
-            serializer = self.get_serializer(data=data)
-            serializer.is_valid(raise_exception=True)
-            self.perform_create(serializer)
+            serializer = IncidentCreateSerializer(data=data)
+            if not serializer.is_valid():
+                print("Validation errors:", serializer.errors)
+                return Response(
+                    {"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
+                )
+
+            incident = self.perform_create(serializer)
             headers = self.get_success_headers(serializer.data)
             return Response(
                 serializer.data, status=status.HTTP_201_CREATED, headers=headers

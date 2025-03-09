@@ -1,5 +1,6 @@
 from django.db import models
 
+
 class InventoryItem(models.Model):
     name = models.CharField(max_length=255)
     quantity = models.IntegerField()
@@ -8,20 +9,22 @@ class InventoryItem(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+
 class ResourceRequest(models.Model):
     STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('approved', 'Approved'),
-        ('in_progress', 'In Progress'),
-        ('completed', 'Completed'),
+        ("pending", "Pending"),
+        ("approved", "Approved"),
+        ("in_progress", "In Progress"),
+        ("completed", "Completed"),
     ]
 
     item = models.ForeignKey(InventoryItem, on_delete=models.CASCADE)
     quantity = models.IntegerField()
     location = models.CharField(max_length=255)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
 
 class Distribution(models.Model):
     location = models.CharField(max_length=255)

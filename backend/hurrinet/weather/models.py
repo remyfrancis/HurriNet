@@ -51,12 +51,10 @@ class WeatherData(models.Model):
     def fetch_from_tomorrow(cls, lat=13.9094, lng=-60.9789, location="Saint Lucia"):
         """Fetch weather data from Tomorrow.io API."""
         api_key = settings.TOMORROW_API_KEY
-        logger.info(
-            f"Using Tomorrow.io API key: {api_key[:5]}..."
-        )  # Only log first 5 chars for security
+        logger.info(f"Using Tomorrow.io API key: {api_key[:5]}...")
 
         # Construct URL with parameters directly
-        url = f"https://api.tomorrow.io/v4/weather/realtime?location={lat},{lng}&apikey={api_key}&fields=temperature,humidity,windSpeed,windDirection,pressure,visibility,precipitationProbability"
+        url = f"https://api.tomorrow.io/v4/weather/realtime?location={lat},{lng}&apikey={api_key}&fields=temperature,temperatureApparent,humidity,windSpeed,windDirection,cloudCover,visibility,pressureSurfaceLevel,precipitationProbability"
 
         try:
             logger.info(f"Making request to Tomorrow.io API for {location}")
@@ -76,19 +74,21 @@ class WeatherData(models.Model):
                 "hurricane": "HURRICANE",
             }
 
+            values = data["data"]["values"]
+            
+            # Create weather data with default values for missing fields
             weather_data = {
-                "temperature": data["data"]["values"]["temperature"],
-                "feels_like": data["data"]["values"].get(
-                    "temperatureApparent", data["data"]["values"]["temperature"]
-                ),
-                "humidity": data["data"]["values"]["humidity"],
-                "wind_speed": data["data"]["values"]["windSpeed"],
-                "wind_direction": data["data"]["values"]["windDirection"],
+                "temperature": values.get("temperature", 0),
+                "feels_like": values.get("temperatureApparent", values.get("temperature", 0)),
+                "humidity": values.get("humidity", 0),
+                "wind_speed": values.get("windSpeed", 0),
+                "wind_direction": values.get("windDirection", 0),
                 "conditions": condition_mapping.get(
-                    data["data"]["values"].get("cloudCover", "clear"), "SUNNY"
+                    "cloudy" if values.get("cloudCover", 0) > 50 else "clear",
+                    "SUNNY"
                 ),
-                "pressure": data["data"]["values"]["pressure"],
-                "visibility": data["data"]["values"]["visibility"],
+                "pressure": values.get("pressureSurfaceLevel", 1013.25),  # Default sea level pressure
+                "visibility": values.get("visibility", 10),  # Default good visibility
                 "location": location,
                 "latitude": lat,
                 "longitude": lng,

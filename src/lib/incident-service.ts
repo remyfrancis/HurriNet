@@ -71,15 +71,14 @@ export class IncidentService {
     if (!this.isAuthenticated) return;
 
     try {
-      const params: any = {};
-      if (this.lastPollTime) {
-        params.updated_after = this.lastPollTime;
-      }
+      const searchParams = new URLSearchParams({
+        since: this.lastPollTime || new Date(0).toISOString()
+      });
 
-      const response = await this.getIncidents(params);
-      if (response.results.length > 0) {
-        this.lastPollTime = new Date().toISOString();
-        response.results.forEach(incident => {
+      const response = await apiClient.get(`/api/incidents/check_updates/?${searchParams.toString()}`);
+      if (response.updates?.length > 0) {
+        this.lastPollTime = response.timestamp;
+        response.updates.forEach(incident => {
           this.notifyUpdateHandlers(incident);
         });
       }
@@ -122,11 +121,20 @@ export class IncidentService {
     return this.isAuthenticated;
   }
 
-  public async createIncident(data: IncidentData): Promise<Incident> {
+  public async createIncident(data: FormData | IncidentData): Promise<Incident> {
     if (!this.isAuthenticated) {
       throw new Error('Authentication required');
     }
-    const response = await apiClient.post('/api/incidents/', data);
+    
+    const config = data instanceof FormData 
+      ? undefined  // Let browser handle FormData headers
+      : { 
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        };
+
+    const response = await apiClient.post('/api/incidents/', data, config);
     return response;
   }
 
@@ -144,7 +152,8 @@ export class IncidentService {
         total: 0
       };
     }
-    const response = await apiClient.get('/api/incidents/', { params });
+    const searchParams = new URLSearchParams(params as Record<string, string>);
+    const response = await apiClient.get(`/api/incidents/?${searchParams.toString()}`);
     return response;
   }
 
@@ -189,7 +198,7 @@ export class IncidentService {
     if (!this.isAuthenticated) {
       throw new Error('Authentication required');
     }
-    const response = await apiClient.post(`/api/incidents/${id}/resolve/`);
+    const response = await apiClient.post(`/api/incidents/${id}/resolve/`, {});
     return response;
   }
 
@@ -213,9 +222,8 @@ export class IncidentService {
     if (!this.isAuthenticated) {
       return [];
     }
-    const response = await apiClient.get('/api/incidents/nearby/', {
-      params: { lat, lng, radius },
-    });
+    const searchParams = new URLSearchParams({ lat: lat.toString(), lng: lng.toString(), radius: radius.toString() });
+    const response = await apiClient.get(`/api/incidents/nearby/?${searchParams.toString()}`);
     return response;
   }
 

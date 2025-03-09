@@ -4,13 +4,11 @@ Models for incident reporting in HurriNet.
 This module defines models for managing incident reports and flags.
 """
 
+from django.contrib.gis.db import models as gis_models
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
 import uuid
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
 
 
 def incident_photo_path(instance, filename):
@@ -32,22 +30,30 @@ class Incident(models.Model):
 
     title = models.CharField(max_length=255)
     description = models.TextField()
-    location = models.CharField(max_length=255, default="Location not specified")
+    location = gis_models.PointField(
+        help_text="Geographic coordinates of the incident", geography=True, srid=4326
+    )
+    affected_area = gis_models.PolygonField(
+        null=True,
+        blank=True,
+        help_text="Geographic area affected by the incident",
+        srid=4326,
+    )
     incident_type = models.CharField(max_length=100)
     severity = models.CharField(max_length=10, choices=SEVERITY_CHOICES)
     photo = models.ImageField(upload_to="incidents/", null=True, blank=True)
     created_by = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="incidents",
-        default=1,  # Default to the first user (usually superuser)
+        default=1,
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_resolved = models.BooleanField(default=False)
     resolved_at = models.DateTimeField(null=True, blank=True)
     resolved_by = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -56,6 +62,10 @@ class Incident(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["-created_at"]),
+            gis_models.Index(fields=["location"]),
+        ]
 
     def __str__(self):
         return f"{self.title} - {self.incident_type}"

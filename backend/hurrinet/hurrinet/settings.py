@@ -26,7 +26,6 @@ TOMORROW_API_KEY = os.getenv("TOMORROW_API_KEY")
 if not TOMORROW_API_KEY:
     raise ValueError("TOMORROW_API_KEY environment variable is not set")
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
@@ -36,18 +35,21 @@ SECRET_KEY = "django-insecure-+ml03ar-1q6w@+@1vu5+fs@+#mn7lk#e@h&pd(s$5dry=yt6qa
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.gis",
+    "channels",
     "rest_framework",
     "corsheaders",
     "accounts.apps.AccountsConfig",
@@ -137,10 +139,28 @@ WSGI_APPLICATION = "hurrinet.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+# GDAL Configuration
+if os.name == "nt":  # Windows
+    os.environ["PATH"] = r"C:\OSGeo4W\bin;" + os.environ["PATH"]
+    os.environ["GDAL_DATA"] = r"C:\OSGeo4W\apps\gdal\share\gdal"
+    os.environ["PROJ_LIB"] = (
+        r"C:\Program Files\PostgreSQL\17\share\contrib\postgis-3.5\proj"
+    )
+    GDAL_LIBRARY_PATH = r"C:\OSGeo4W\bin\gdal310.dll"
+else:  # Linux/Docker
+    GDAL_LIBRARY_PATH = "/usr/lib/x86_64-linux-gnu/libgdal.so"
+    os.environ["GDAL_DATA"] = "/usr/share/gdal"
+    os.environ["PROJ_LIB"] = "/usr/share/proj"
+
+# Database Configuration
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.contrib.gis.db.backends.postgis",
+        "NAME": os.getenv("POSTGRES_DB", "hurrinet_db"),
+        "USER": os.getenv("POSTGRES_USER", "postgres"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "yadmon13"),
+        "HOST": os.getenv("POSTGRES_HOST", "db"),
+        "PORT": os.getenv("POSTGRES_PORT", "5432"),
     }
 }
 
@@ -214,3 +234,32 @@ LOGGING = {
         },
     },
 }
+
+# Add ASGI application
+ASGI_APPLICATION = "hurrinet.asgi.application"
+
+# Channel layers configuration
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+        "CONFIG": {
+            "capacity": 1500,
+        },
+    }
+}
+
+# For production, uncomment this and comment out the above:
+# CHANNEL_LAYERS = {
+#     "default": {
+#         "BACKEND": "channels_redis.core.RedisChannelLayer",
+#         "CONFIG": {
+#             "hosts": [("127.0.0.1", 6379)],
+#         },
+#     }
+# }
+
+# WebSocket settings
+WEBSOCKET_URL = "/ws/incidents/"
+
+# CORS settings
+CORS_ALLOW_ALL_ORIGINS = True  # For development only

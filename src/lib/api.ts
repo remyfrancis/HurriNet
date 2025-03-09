@@ -51,10 +51,13 @@ class ApiClient {
 
   private async getHeaders(): Promise<HeadersInit> {
     const token = getAuthToken();
-    return {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: token } : {}),
-    };
+    const headers: HeadersInit = {};
+    
+    if (token) {
+      headers.Authorization = token;
+    }
+    
+    return headers;
   }
 
   private async handleResponse(response: Response) {
@@ -91,6 +94,13 @@ class ApiClient {
 
   async post(endpoint: string, data: any, options: RequestInit = {}) {
     const headers = await this.getHeaders();
+    const isFormData = data instanceof FormData;
+    
+    // Don't include Content-Type header for FormData
+    if (isFormData) {
+      delete headers['Content-Type'];
+    }
+
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method: 'POST',
       ...options,
@@ -98,7 +108,8 @@ class ApiClient {
         ...headers,
         ...options.headers,
       },
-      body: JSON.stringify(data),
+      // Don't stringify FormData
+      body: isFormData ? data : JSON.stringify(data),
     });
     return this.handleResponse(response);
   }

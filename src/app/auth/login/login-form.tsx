@@ -7,24 +7,24 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
+import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from "@/hooks/use-toast"
 
 export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
   const router = useRouter()
+  const { login } = useAuth()
+  const { toast } = useToast()
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setIsLoading(true)
-    setError('')
 
     try {
       // First, get the JWT tokens
       const loginUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/login/`
-      console.log('Login URL:', loginUrl)
-      console.log('Attempting login with:', { email, password })
       
       const response = await fetch(loginUrl, {
         method: 'POST',
@@ -40,15 +40,9 @@ export default function LoginForm() {
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Login failed')
+        throw new Error(data.detail || 'Login failed')
       }
 
-      console.log('Login response:', data)
-
-      // Store tokens
-      localStorage.setItem('accessToken', `Bearer ${data.access}`)
-      localStorage.setItem('refreshToken', data.refresh)
-      
       // Now fetch the user data
       const userResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/me/`, {
         headers: {
@@ -61,10 +55,14 @@ export default function LoginForm() {
       }
 
       const userData = await userResponse.json()
-      console.log('User data:', userData)
       
-      // Store user data
-      localStorage.setItem('user', JSON.stringify(userData))
+      // Use AuthContext login instead of localStorage
+      login(data.access, userData)
+
+      toast({
+        title: "Success",
+        description: "Successfully logged in",
+      })
 
       // Redirect based on user role
       switch (userData.role) {
@@ -72,19 +70,24 @@ export default function LoginForm() {
           router.push('/admin-dashboard')
           break
         case 'EMERGENCY_PERSONNEL':
+          router.push('/emergency-personnel-dashboard')
+          break
         case 'RESOURCE_MANAGER':
-          router.push('/emergency-dashboard')
+          router.push('/resource-manager-dashboard')
           break
         case 'MEDICAL_PERSONNEL':
           router.push('/medical-dashboard')
           break
         default:
-          router.push('/dashboard')
+          router.push('/citizen-dashboard')
       }
-      router.refresh()
-    } catch (err) {
-      console.error('Login error:', err)
-      setError(err instanceof Error ? err.message : 'Login failed')
+    } catch (error) {
+      console.error('Login error:', error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Login failed',
+        variant: "destructive",
+      })
     } finally {
       setIsLoading(false)
     }
@@ -131,9 +134,6 @@ export default function LoginForm() {
             Remember me
           </Label>
         </div>
-        {error && (
-          <p className="text-sm text-red-500">{error}</p>
-        )}
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? "Logging in..." : "Log in"}
         </Button>

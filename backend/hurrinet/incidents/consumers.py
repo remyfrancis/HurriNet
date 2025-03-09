@@ -2,10 +2,7 @@ import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from .models import Incident
-from django.contrib.auth import get_user_model
 from urllib.parse import parse_qs
-
-User = get_user_model()
 
 
 class IncidentConsumer(AsyncWebsocketConsumer):
@@ -79,8 +76,10 @@ class IncidentConsumer(AsyncWebsocketConsumer):
                 token = token.split(" ")[1]
 
             # Get the user from the token
+            from django.contrib.auth import get_user_model
             from rest_framework_simplejwt.tokens import AccessToken
 
+            User = get_user_model()
             access_token = AccessToken(token)
             user_id = access_token.payload.get("user_id")
             return User.objects.get(id=user_id)

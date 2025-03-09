@@ -5,6 +5,7 @@ import { Stethoscope, Siren, Users2, Boxes, UsersIcon, SettingsIcon, BellIcon, H
 import { Sidebar } from "@/components/Sidebar/index"
 import { AlertProvider } from "@/contexts/AlertContext"
 import { SupplierUpdatesProvider } from "@/contexts/SupplierUpdatesContext";
+import { AuthProvider } from '@/contexts/AuthContext';
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -127,25 +128,21 @@ const sidebarItems = [
   // }
 ]
 
-
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <AlertProvider>
-          <div className="flex h-screen">
-            {/* <Sidebar items={sidebarItems} /> */}
-            <main className="flex-1">
-              <SupplierUpdatesProvider>
-                {children}
-              </SupplierUpdatesProvider>
-            </main>
-          </div>
-        </AlertProvider>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body>
+        <AuthProvider>
+          <AlertProvider>
+            <SupplierUpdatesProvider>
+              {children}
+            </SupplierUpdatesProvider>
+          </AlertProvider>
+        </AuthProvider>
       </body>
     </html>
   );

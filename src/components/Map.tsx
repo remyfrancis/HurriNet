@@ -1,33 +1,68 @@
 "use client";
 
-// IMPORTANT: the order matters!
+import { useEffect, useState } from 'react';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
 import "leaflet/dist/leaflet.css";
 import "leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.webpack.css";
 import "leaflet-defaulticon-compatibility";
 
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
+interface MapProps {
+  selectedLocation: { lat: number; lng: number } | null;
+  onLocationSelect: (location: { lat: number; lng: number }) => void;
+}
 
-export default function Map() {
-  const position = [51.505, -0.09]
+function MapClickHandler({ onLocationSelect }: { onLocationSelect: (location: { lat: number; lng: number }) => void }) {
+  useMapEvents({
+    click: (e) => {
+      onLocationSelect({ lat: e.latlng.lat, lng: e.latlng.lng });
+    },
+  });
+  return null;
+}
+
+export default function Map({ selectedLocation, onLocationSelect }: MapProps) {
+  const defaultCenter = { lat: 0, lng: 0 };
+  const [icon, setIcon] = useState<L.Icon | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    setIcon(
+      new L.Icon({
+        iconUrl: '/marker-icon.png',
+        shadowUrl: '/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+      })
+    );
+  }, []);
+
+  if (!icon || !isMounted) {
+    return <div className="h-full w-full bg-gray-100" />;
+  }
 
   return (
+    <div suppressHydrationWarning>
       <MapContainer
-        center={position}
-        zoom={11}
-        scrollWheelZoom={true}
-        {/* IMPORTANT: the map container needs a defined size, otherwise nothing will be visible */}
-        style={{ height: "400px", width: "600px" }}
+        center={defaultCenter}
+        zoom={2}
+        style={{ height: '100%', width: '100%' }}
+        key="map"
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
-        <Marker position={position}>
-          <Popup>
-            This Marker icon is displayed correctly with <i>leaflet-defaulticon-compatibility</i>.
-          </Popup>
-        </Marker>
+        <MapClickHandler onLocationSelect={onLocationSelect} />
+        {selectedLocation && (
+          <Marker
+            position={[selectedLocation.lat, selectedLocation.lng]}
+            icon={icon}
+          />
+        )}
       </MapContainer>
+    </div>
   );
 }
 
