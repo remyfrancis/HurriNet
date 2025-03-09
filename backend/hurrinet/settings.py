@@ -1,3 +1,25 @@
+import os
+from pathlib import Path
+
+# Build paths inside the project
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = True
+
+ALLOWED_HOSTS = ["*"]
+
+# Static files configuration
+STATIC_URL = "/static/"
+STATIC_ROOT = str(BASE_DIR / "staticfiles")
+STATICFILES_DIRS = [
+    str(BASE_DIR / "static"),
+]
+
+# Media files configuration
+MEDIA_URL = "/media/"
+MEDIA_ROOT = str(BASE_DIR / "media")
+
 # Add 'django.contrib.gis' to INSTALLED_APPS
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -12,6 +34,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "channels",
     "incidents.apps.IncidentsConfig",
+    "teams.apps.TeamsConfig",
 ]
 
 # Database configuration for PostGIS
@@ -20,8 +43,8 @@ DATABASES = {
         "ENGINE": "django.contrib.gis.db.backends.postgis",
         "NAME": "hurrinet_db",
         "USER": "postgres",
-        "PASSWORD": "postgres",  # Change this to your actual password
-        "HOST": "localhost",
+        "PASSWORD": "yadmon13",
+        "HOST": "hurrinet-db-1",
         "PORT": "5432",
     }
 }
