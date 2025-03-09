@@ -1,59 +1,146 @@
-from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework import viewsets, status
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .models import InventoryItem, ResourceRequest, Distribution
+from django.contrib.gis.geos import Point
+from django.contrib.gis.db.models.functions import Distance
+import numpy as np
+from scipy.optimize import linear_sum_assignment
+from .models import Resource, InventoryItem, ResourceRequest, Distribution
 from .serializers import (
+    ResourceSerializer,
     InventoryItemSerializer,
     ResourceRequestSerializer,
     DistributionSerializer,
 )
 
 
-@api_view(["GET", "POST"])
-@permission_classes([IsAuthenticated])
-def inventory_list(request):
-    if request.method == "GET":
-        inventory = InventoryItem.objects.all()
-        serializer = InventoryItemSerializer(inventory, many=True)
-        return Response(serializer.data)
+class ResourceViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing resources"""
 
-    elif request.method == "POST":
-        serializer = InventoryItemSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    queryset = Resource.objects.all()
+    serializer_class = ResourceSerializer
+    permission_classes = [IsAuthenticated]
 
+    @action(detail=False, methods=["post"])
+    def allocate_resources(self, request):
+        """
+        Allocate resources to requests using the Hungarian Algorithm
+        Request format:
+        {
+            "requests": [{"id": 1, "location": [lat, lon], "priority": 1}, ...],
+            "resources": [{"id": 1, "location": [lat, lon], "capacity": 10}, ...]
+        }
+        """
+        requests_data = request.data.get("requests", [])
+        resources_data = request.data.get("resources", [])
 
-@api_view(["GET", "PUT"])
-@permission_classes([IsAuthenticated])
-def resource_requests(request):
-    print("Authorization Header:", request.META.get("HTTP_AUTHORIZATION"))
-    print("Headers:", dict(request.headers))
-    print("User:", request.user)
-    print("Auth:", request.auth)
-    print("Method:", request.method)
+        if not requests_data or not resources_data:
+            return Response(
+                {"error": "Both requests and resources are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-    if request.method == "GET":
-        requests = ResourceRequest.objects.all()
+        # Create cost matrix based on distance and priority
+        cost_matrix = np.zeros((len(requests_data), len(resources_data)))
+
+        for i, req in enumerate(requests_data):
+            req_location = Point(req["location"][1], req["location"][0])
+            req_priority = req.get("priority", 1)
+
+            for j, res in enumerate(resources_data):
+                res_location = Point(res["location"][1], res["location"][0])
+                distance = req_location.distance(res_location)
+                capacity = res.get("capacity", 1)
+
+                # Cost function: distance * priority / capacity
+                cost_matrix[i][j] = (distance * req_priority) / capacity
+
+        # Apply Hungarian Algorithm
+        row_ind, col_ind = linear_sum_assignment(cost_matrix)
+
+        # Create assignments
+        assignments = []
+        for i, j in zip(row_ind, col_ind):
+            if i < len(requests_data) and j < len(resources_data):
+                assignments.append(
+                    {
+                        "request_id": requests_data[i]["id"],
+                        "resource_id": resources_data[j]["id"],
+                        "cost": cost_matrix[i][j],
+                    }
+                )
+
+        # Update resource assignments in database
+        for assignment in assignments:
+            resource = Resource.objects.get(id=assignment["resource_id"])
+            request = ResourceRequest.objects.get(id=assignment["request_id"])
+
+            resource.assigned_request = request
+            resource.last_assignment_cost = assignment["cost"]
+            resource.save()
+
+            request.status = "assigned"
+            request.save()
+
+        return Response(assignments)
+
+    @action(detail=True, methods=["get"])
+    def nearby_requests(self, request, pk=None):
+        """Get nearby resource requests within coverage area"""
+        resource = self.get_object()
+        requests = (
+            ResourceRequest.objects.filter(
+                location__within=resource.coverage_area, status="pending"
+            )
+            .annotate(distance=Distance("location", resource.location))
+            .order_by("distance")
+        )
+
         serializer = ResourceRequestSerializer(requests, many=True)
         return Response(serializer.data)
-    elif request.method == "PUT":
-        request_id = request.data.get("id")
-        try:
-            resource_request = ResourceRequest.objects.get(id=request_id)
-            resource_request.status = request.data.get("status")
-            resource_request.save()
-            serializer = ResourceRequestSerializer(resource_request)
+
+
+class InventoryItemViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing inventory items"""
+
+    queryset = InventoryItem.objects.all()
+    serializer_class = InventoryItemSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class ResourceRequestViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing resource requests"""
+
+    queryset = ResourceRequest.objects.all()
+    serializer_class = ResourceRequestSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(requester=self.request.user)
+
+
+class DistributionViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing distributions"""
+
+    queryset = Distribution.objects.all()
+    serializer_class = DistributionSerializer
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=True, methods=["post"])
+    def update_completion(self, request, pk=None):
+        """Update the completion status of a distribution"""
+        distribution = self.get_object()
+        fulfilled = request.data.get("fulfilled_requests")
+
+        if fulfilled is not None:
+            distribution.fulfilled_requests = fulfilled
+            distribution.save()
+
+            serializer = self.get_serializer(distribution)
             return Response(serializer.data)
-        except ResourceRequest.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
 
-
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def distribution_status(request):
-    distribution = Distribution.objects.all()
-    serializer = DistributionSerializer(distribution, many=True)
-    return Response(serializer.data)
+        return Response(
+            {"error": "fulfilled_requests is required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )

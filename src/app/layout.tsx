@@ -7,6 +7,7 @@ import { AlertProvider } from "@/contexts/AlertContext"
 import { SupplierUpdatesProvider } from "@/contexts/SupplierUpdatesContext";
 import { AuthProvider } from '@/contexts/AuthContext';
 
+// Load custom fonts using next/font
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
@@ -18,11 +19,13 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
+// Define metadata for the application
 export const metadata: Metadata = {
   title: "HurriNet",
   description: "HurriNet is a platform for emergency management and response.",
 };
 
+// Define sidebar navigation items with their respective routes and icons
 const sidebarItems = [
   {
     key: "hq-dashboard",
@@ -120,6 +123,7 @@ const sidebarItems = [
       },
     ],
   },
+  // Alert management temporarily disabled
   // {
   //   key: "alert-management",
   //   title: "Alert Management",
@@ -128,6 +132,7 @@ const sidebarItems = [
   // }
 ]
 
+// Root layout component that wraps the entire application
 export default function RootLayout({
   children,
 }: {
@@ -136,8 +141,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
+        {/* Authentication provider wraps the entire app to manage auth state */}
         <AuthProvider>
+          {/* Alert provider for managing emergency alerts and notifications */}
           <AlertProvider>
+            {/* Provider for real-time supplier updates */}
             <SupplierUpdatesProvider>
               {children}
             </SupplierUpdatesProvider>

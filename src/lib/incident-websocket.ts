@@ -1,28 +1,42 @@
 import { getAuthToken } from './auth-client';
 
+// Define the types of messages that can be received from the WebSocket
 export interface IncidentWebSocketMessage {
-  type: 'incident_update' | 'incident_create' | 'incident_resolve' | 'incident_flag';
+  type: 'incident_update' | 'incident_create' | 'incident_resolve' | 'incident_flag' | 'ping' | 'pong';
   data: any;
 }
 
+/**
+ * WebSocket client for handling real-time incident updates
+ * Features:
+ * - Automatic reconnection with exponential backoff
+ * - Message queueing when disconnected
+ * - Ping/pong heartbeat to detect connection issues
+ * - Subscription-based message handling
+ */
 export class IncidentWebSocket {
-  private ws: WebSocket | null = null;
-  private reconnectAttempts = 0;
-  private readonly MAX_RECONNECT_ATTEMPTS = 5;
-  private readonly INITIAL_RETRY_DELAY = 1000; // 1 second
-  private isConnecting = false;
-  private messageQueue: string[] = [];
-  private messageHandlers: Map<string, ((data: any) => void)[]> = new Map();
-  private pingInterval: NodeJS.Timeout | null = null;
-  private lastPongTime: number = Date.now();
+  private ws: WebSocket | null = null;                    // WebSocket instance
+  private reconnectAttempts = 0;                         // Number of reconnection attempts
+  private readonly MAX_RECONNECT_ATTEMPTS = 5;           // Maximum number of reconnection attempts
+  private readonly INITIAL_RETRY_DELAY = 1000;           // Initial delay between reconnection attempts (1 second)
+  private isConnecting = false;                          // Flag to prevent multiple simultaneous connections
+  private messageQueue: string[] = [];                   // Queue for messages when disconnected
+  private messageHandlers: Map<string, ((data: any) => void)[]> = new Map();  // Message handlers by type
+  private pingInterval: NodeJS.Timeout | null = null;    // Interval for sending ping messages
+  private lastPongTime: number = Date.now();            // Timestamp of last received pong
 
   constructor(private url: string) {
     this.connect();
     this.setupPingPong();
   }
 
+  /**
+   * Sets up ping/pong heartbeat mechanism
+   * - Sends ping every 30 seconds
+   * - Checks for pong response within 45 seconds
+   * - Initiates reconnection if no pong received
+   */
   private setupPingPong() {
-    // Send ping every 30 seconds
     this.pingInterval = setInterval(() => {
       if (this.ws?.readyState === WebSocket.OPEN) {
         this.ws.send(JSON.stringify({ type: 'ping' }));
@@ -36,6 +50,13 @@ export class IncidentWebSocket {
     }, 30000);
   }
 
+  /**
+   * Establishes WebSocket connection
+   * - Retrieves authentication token
+   * - Converts HTTP URL to WebSocket URL
+   * - Sets up event handlers
+   * @returns WebSocket instance or null if connection fails
+   */
   private connect(): WebSocket | null {
     if (this.isConnecting) {
       console.log('Connection already in progress');
@@ -72,6 +93,11 @@ export class IncidentWebSocket {
     }
   }
 
+  /**
+   * Handles successful WebSocket connection
+   * - Resets connection flags
+   * - Sends any queued messages
+   */
   private handleOpen() {
     console.log('WebSocket connected successfully');
     this.isConnecting = false;
@@ -86,6 +112,11 @@ export class IncidentWebSocket {
     }
   }
 
+  /**
+   * Handles WebSocket connection closure
+   * - Implements exponential backoff for reconnection
+   * - Limits maximum reconnection attempts
+   */
   private handleClose(event: CloseEvent) {
     console.log('WebSocket disconnected:', event.code, event.reason);
     this.isConnecting = false;
@@ -103,6 +134,10 @@ export class IncidentWebSocket {
     }
   }
 
+  /**
+   * Handles WebSocket errors
+   * - Initiates reconnection if connection is closed
+   */
   private handleError(event: Event) {
     console.error('WebSocket error occurred:', event);
     if (this.ws?.readyState === WebSocket.CLOSED) {
@@ -110,9 +145,14 @@ export class IncidentWebSocket {
     }
   }
 
+  /**
+   * Processes incoming WebSocket messages
+   * - Handles ping/pong heartbeat
+   * - Routes messages to appropriate handlers
+   */
   private handleMessage(event: MessageEvent) {
     try {
-      const message: IncidentWebSocketMessage = JSON.parse(event.data);
+      const message: IncidentWebSocketMessage & { type: string } = JSON.parse(event.data);
       
       // Handle pong messages
       if (message.type === 'pong') {
@@ -134,6 +174,11 @@ export class IncidentWebSocket {
     }
   }
 
+  /**
+   * Initiates reconnection process
+   * - Closes existing connection
+   * - Starts new connection
+   */
   private reconnect() {
     if (this.ws) {
       this.ws.close();
@@ -142,6 +187,11 @@ export class IncidentWebSocket {
     this.connect();
   }
 
+  /**
+   * Sends a message through the WebSocket
+   * - Queues message if connection is not open
+   * - Initiates connection if not already connecting
+   */
   public send(type: string, data: any) {
     const message = JSON.stringify({ type, data });
     
@@ -156,6 +206,11 @@ export class IncidentWebSocket {
     }
   }
 
+  /**
+   * Subscribes to a specific message type
+   * @param type Message type to subscribe to
+   * @param handler Function to handle messages of this type
+   */
   public subscribe(type: string, handler: (data: any) => void) {
     if (!this.messageHandlers.has(type)) {
       this.messageHandlers.set(type, []);
@@ -163,6 +218,11 @@ export class IncidentWebSocket {
     this.messageHandlers.get(type)?.push(handler);
   }
 
+  /**
+   * Unsubscribes from a specific message type
+   * @param type Message type to unsubscribe from
+   * @param handler Handler function to remove
+   */
   public unsubscribe(type: string, handler: (data: any) => void) {
     const handlers = this.messageHandlers.get(type) || [];
     const index = handlers.indexOf(handler);
@@ -171,6 +231,12 @@ export class IncidentWebSocket {
     }
   }
 
+  /**
+   * Cleans up WebSocket connection and resources
+   * - Clears ping interval
+   * - Closes connection
+   * - Clears message handlers and queue
+   */
   public disconnect() {
     if (this.pingInterval) {
       clearInterval(this.pingInterval);
@@ -187,6 +253,10 @@ export class IncidentWebSocket {
     this.isConnecting = false;
   }
 
+  /**
+   * Returns current connection state
+   * @returns String representation of WebSocket state
+   */
   public getState(): string {
     if (!this.ws) return 'DISCONNECTED';
     

@@ -33,11 +33,7 @@ RUN pip install --no-cache-dir pip --upgrade && \
     pip install --no-cache-dir numpy && \
     pip install --no-cache-dir GDAL==$(cat gdal_version.txt) && \
     rm gdal_version.txt && \
-    pip install --no-cache-dir -r requirements.txt && \
-    # Verify installations
-    python -c "import numpy; print('numpy version:', numpy.__version__)" && \
-    python -c "from osgeo import gdal; print('gdal version:', gdal.__version__)" && \
-    python -c "import requests; print('requests version:', requests.__version__)"
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy project
 COPY . .

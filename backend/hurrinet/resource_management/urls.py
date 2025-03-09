@@ -1,8 +1,13 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from . import views
 
+router = DefaultRouter()
+router.register(r"resources", views.ResourceViewSet)
+router.register(r"inventory", views.InventoryItemViewSet)
+router.register(r"requests", views.ResourceRequestViewSet)
+router.register(r"distributions", views.DistributionViewSet)
+
 urlpatterns = [
-    path("inventory/", views.inventory_list, name="inventory-list"),
-    path("requests/", views.resource_requests, name="resource-requests"),
-    path("distribution/", views.distribution_status, name="distribution-status"),
+    path("", include(router.urls)),
 ]
