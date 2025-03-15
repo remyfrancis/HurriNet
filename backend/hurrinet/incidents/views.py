@@ -24,6 +24,19 @@ from .permissions import (
     CanReviewFlags,
 )
 import uuid
+from django.shortcuts import render
+from django.conf import settings
+from utils.cache import (
+    get_cache_key,
+    get_cached_data,
+    set_cached_data,
+    delete_cached_data,
+    cache_response,
+    clear_pattern,
+)
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from django.core.cache import cache
 
 
 class IncidentViewSet(viewsets.ModelViewSet):
@@ -57,10 +70,15 @@ class IncidentViewSet(viewsets.ModelViewSet):
     ordering = ["-created_at"]
 
     def get_queryset(self):
-        """Get active incidents."""
-        queryset = Incident.objects.all()
-        if not self.request.user.is_staff:
-            queryset = queryset.filter(created_by=self.request.user)
+        """Get cached queryset if available."""
+        cache_key = get_cache_key("incidents", "list")
+        cached_data = get_cached_data(cache_key)
+
+        if cached_data is not None:
+            return cached_data
+
+        queryset = super().get_queryset()
+        set_cached_data(cache_key, queryset, settings.INCIDENT_CACHE_TTL)
         return queryset
 
     def get_serializer_class(self):
@@ -208,6 +226,7 @@ class IncidentViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def resolve(self, request, pk=None):
+        """Resolve incident and invalidate cache."""
         incident = self.get_object()
         if not request.user.is_staff:
             return Response(
@@ -218,6 +237,10 @@ class IncidentViewSet(viewsets.ModelViewSet):
         incident.is_resolved = True
         incident.resolved_by = request.user
         incident.save()
+
+        # Invalidate caches
+        delete_cached_data(get_cache_key("incidents", f"detail:{pk}"))
+        clear_pattern("incidents:list")
 
         serializer = self.get_serializer(incident)
         return Response(serializer.data)
@@ -246,53 +269,55 @@ class IncidentViewSet(viewsets.ModelViewSet):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     def create(self, request, *args, **kwargs):
-        """Create a new incident."""
-        try:
-            # Log incoming data
-            print("Received data:", request.data)
-            print("Files:", request.FILES)
+        """Create a new incident and invalidate cache."""
+        response = super().create(request, *args, **kwargs)
+        clear_pattern("incidents:*")
+        return response
 
-            # Parse location data
-            location_data = request.data.get("location")
-            if isinstance(location_data, str):
-                try:
-                    import json
+    def update(self, request, *args, **kwargs):
+        """Update incident and invalidate cache."""
+        response = super().update(request, *args, **kwargs)
+        incident_id = kwargs.get("pk")
+        delete_cached_data(get_cache_key("incidents", f"detail:{incident_id}"))
+        clear_pattern("incidents:list")
+        return response
 
-                    location_data = json.loads(location_data)
-                except json.JSONDecodeError:
-                    return Response(
-                        {"error": "Invalid location data format"},
-                        status=status.HTTP_400_BAD_REQUEST,
-                    )
+    def destroy(self, request, *args, **kwargs):
+        """Delete incident and invalidate cache."""
+        incident_id = kwargs.get("pk")
+        response = super().destroy(request, *args, **kwargs)
+        delete_cached_data(get_cache_key("incidents", f"detail:{incident_id}"))
+        clear_pattern("incidents:list")
+        return response
 
-            # Create incident data
-            data = {
-                "title": request.data.get("title"),
-                "description": request.data.get("description"),
-                "incident_type": request.data.get("incident_type"),
-                "severity": request.data.get("severity"),
-                "location": location_data,
-            }
+    @method_decorator(cache_page(timeout=300))  # 5 minutes cache
+    def retrieve(self, request, *args, **kwargs):
+        """Get cached incident detail."""
+        return super().retrieve(request, *args, **kwargs)
 
-            print("Processed data:", data)
 
-            # Handle photo if present
-            if "photo" in request.FILES:
-                data["photo"] = request.FILES["photo"]
+class IncidentUpdateViewSet(viewsets.ModelViewSet):
+    queryset = IncidentUpdate.objects.all()
+    serializer_class = IncidentUpdateSerializer
 
-            # Use IncidentCreateSerializer for validation and creation
-            serializer = IncidentCreateSerializer(data=data)
-            if not serializer.is_valid():
-                print("Validation errors:", serializer.errors)
-                return Response(
-                    {"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST
-                )
+    def create(self, request, *args, **kwargs):
+        """Create update and invalidate incident cache."""
+        response = super().create(request, *args, **kwargs)
+        incident_id = response.data.get("incident")
+        delete_cached_data(get_cache_key("incidents", f"detail:{incident_id}"))
+        return response
 
-            incident = self.perform_create(serializer)
-            headers = self.get_success_headers(serializer.data)
-            return Response(
-                serializer.data, status=status.HTTP_201_CREATED, headers=headers
-            )
-        except Exception as e:
-            print("Error:", str(e))
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    def update(self, request, *args, **kwargs):
+        """Update incident update and invalidate cache."""
+        response = super().update(request, *args, **kwargs)
+        incident_id = response.data.get("incident")
+        delete_cached_data(get_cache_key("incidents", f"detail:{incident_id}"))
+        return response
+
+    def destroy(self, request, *args, **kwargs):
+        """Delete incident update and invalidate cache."""
+        update = self.get_object()
+        incident_id = update.incident.id
+        response = super().destroy(request, *args, **kwargs)
+        delete_cached_data(get_cache_key("incidents", f"detail:{incident_id}"))
+        return response

@@ -26,6 +26,11 @@ TOMORROW_API_KEY = os.getenv("TOMORROW_API_KEY")
 if not TOMORROW_API_KEY:
     raise ValueError("TOMORROW_API_KEY environment variable is not set")
 
+# Cache timeout settings
+CACHE_TTL = 60 * 15  # 15 minutes default
+INCIDENT_CACHE_TTL = 60 * 5  # 5 minutes for incidents
+WEATHER_CACHE_TTL = 60 * 30  # 30 minutes for weather data
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
@@ -35,7 +40,7 @@ SECRET_KEY = "django-insecure-+ml03ar-1q6w@+@1vu5+fs@+#mn7lk#e@h&pd(s$5dry=yt6qa
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "web"]
 
 
 # Application definition
@@ -78,6 +83,7 @@ SIMPLE_JWT = {
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -164,6 +170,25 @@ DATABASES = {
     }
 }
 
+# Cache Configuration
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://redis:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "SOCKET_CONNECT_TIMEOUT": 5,
+            "SOCKET_TIMEOUT": 5,
+            "RETRY_ON_TIMEOUT": True,
+            "MAX_CONNECTIONS": 1000,
+            "CONNECTION_POOL_KWARGS": {"max_connections": 50},
+        },
+    }
+}
+
+# Cache key prefix to avoid collisions
+CACHE_KEY_PREFIX = "hurrinet"
+
 AUTH_USER_MODEL = "accounts.User"
 
 # Password validation
@@ -200,9 +225,14 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
+STATIC_ROOT = "/app/staticfiles"
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, "static"),
+]
+
 MEDIA_URL = "/media/"
-MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+MEDIA_ROOT = "/app/media"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -263,3 +293,6 @@ WEBSOCKET_URL = "/ws/incidents/"
 
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True  # For development only
+
+# Use whitenoise for static files
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"

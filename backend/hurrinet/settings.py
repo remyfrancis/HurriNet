@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "channels",
     "incidents.apps.IncidentsConfig",
     "teams.apps.TeamsConfig",
+    "utils.apps.UtilsConfig",  # Update utils app path
 ]
 
 # Database configuration for PostGIS
@@ -55,8 +56,50 @@ ROOT_URLCONF = "hurrinet.urls"
 # Add Channels configuration
 ASGI_APPLICATION = "hurrinet.asgi.application"
 
-# Channel layers configuration - Using in-memory layer for development
-CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+# Redis Cache Configuration
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": os.getenv("REDIS_URL", "redis://redis:6379/1"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "MAX_ENTRIES": 1000,
+            "CULL_FREQUENCY": 3,
+            "SOCKET_CONNECT_TIMEOUT": 5,
+            "SOCKET_TIMEOUT": 5,
+            "RETRY_ON_TIMEOUT": True,
+            "CONNECTION_POOL_KWARGS": {"max_connections": 50},
+        },
+    }
+}
+
+# Cache key prefix
+CACHE_KEY_PREFIX = "hurrinet"
+
+# Cache timeout settings
+CACHE_TTL = 60 * 15  # 15 minutes default
+INCIDENT_CACHE_TTL = 60 * 5  # 5 minutes for incidents
+WEATHER_CACHE_TTL = 60 * 30  # 30 minutes for weather data
+
+# Channel layers configuration for WebSocket
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [
+                (os.getenv("REDIS_HOST", "redis"), int(os.getenv("REDIS_PORT", 6379)))
+            ],
+            "capacity": 1500,
+            "expiry": 60,
+            "group_expiry": 86400,
+            "channel_capacity": {
+                "http.request": 100,
+                "http.response!*": 100,
+                "websocket.send!*": 100,
+            },
+        },
+    }
+}
 
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True  # For development only
