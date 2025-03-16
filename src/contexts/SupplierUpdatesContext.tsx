@@ -52,11 +52,14 @@ export function SupplierUpdatesProvider({ children }: { children: React.ReactNod
           : `${wsProtocol}//localhost:8000`;
 
         // Add token as a query parameter
-        ws = new WebSocket(`${wsUrl}/ws/incidents/?token=${token.replace('Bearer ', '')}`);
+        const fullWsUrl = `${wsUrl}/ws/incidents/?token=${token.replace('Bearer ', '')}`;
+        console.log(`Attempting to connect to WebSocket at: ${wsUrl}/ws/incidents/`);
+        
+        ws = new WebSocket(fullWsUrl);
         setConnectionStatus('connecting');
 
         ws.onopen = () => {
-          console.log('WebSocket connected');
+          console.log('WebSocket connected successfully');
           setConnectionStatus('connected');
         };
 
@@ -70,17 +73,23 @@ export function SupplierUpdatesProvider({ children }: { children: React.ReactNod
           }
         };
 
-        ws.onerror = (error) => {
-          console.error('WebSocket error:', error);
-          setConnectionStatus('disconnected');
+        ws.onerror = () => {
+          // The error object in WebSocket events doesn't contain useful information
+          console.log('WebSocket connection error - this is normal if the backend is not running WebSockets');
+          // Don't immediately set to disconnected, let onclose handle the state change
         };
 
-        ws.onclose = () => {
-          console.log('WebSocket disconnected');
+        ws.onclose = (event) => {
+          console.log(`WebSocket disconnected with code: ${event.code}, reason: ${event.reason || 'No reason provided'}`);
           setConnectionStatus('disconnected');
-          // Try to reconnect after 5 seconds
-          if (reconnectTimeout) clearTimeout(reconnectTimeout);
-          reconnectTimeout = setTimeout(connectWebSocket, 5000);
+          
+          // Only attempt to reconnect if we're not closing intentionally
+          if (event.code !== 1000) {
+            console.log('Attempting to reconnect in 5 seconds...');
+            // Try to reconnect after 5 seconds
+            if (reconnectTimeout) clearTimeout(reconnectTimeout);
+            reconnectTimeout = setTimeout(connectWebSocket, 5000);
+          }
         };
       } catch (error) {
         console.error('Error creating WebSocket:', error);

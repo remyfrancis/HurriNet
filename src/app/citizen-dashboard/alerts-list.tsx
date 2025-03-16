@@ -25,18 +25,29 @@ type SeverityOrder = {
   LOW: number
 }
 
-export function AlertsList() {
+interface AlertsListProps {
+  forceListView?: boolean;
+}
+
+export function AlertsList({ forceListView = false }: AlertsListProps) {
   const [alerts, setAlerts] = useState<AlertData[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
   const [progress, setProgress] = useState(0)
-  const [showAllAlerts, setShowAllAlerts] = useState(false)
+  const [showAllAlerts, setShowAllAlerts] = useState(forceListView)
   const autoScrollIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null)
   
   const AUTO_SCROLL_DELAY = 6000; // 6 seconds per alert
+
+  useEffect(() => {
+    // If forceListView is true, ensure showAllAlerts is also true
+    if (forceListView && !showAllAlerts) {
+      setShowAllAlerts(true);
+    }
+  }, [forceListView, showAllAlerts]);
 
   useEffect(() => {
     const fetchAlerts = async () => {
@@ -147,11 +158,13 @@ export function AlertsList() {
   }, [])
 
   const toggleViewAllAlerts = useCallback(() => {
-    setShowAllAlerts(prev => !prev)
-    if (!showAllAlerts) {
-      setIsPaused(true) // Pause carousel when showing all alerts
+    if (!forceListView) {
+      setShowAllAlerts(prev => !prev)
+      if (!showAllAlerts) {
+        setIsPaused(true) // Pause carousel when showing all alerts
+      }
     }
-  }, [showAllAlerts])
+  }, [showAllAlerts, forceListView])
 
   const handleMouseEnter = () => {
     // Don't auto-pause on hover, let user control with the pause button
@@ -233,18 +246,20 @@ export function AlertsList() {
   if (showAllAlerts) {
     return (
       <div className="space-y-4 w-full max-w-full">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">All Active Alerts ({alerts.length})</h2>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={toggleViewAllAlerts}
-            className="flex items-center gap-1"
-          >
-            <X className="h-4 w-4" />
-            <span>Close List</span>
-          </Button>
-        </div>
+        {!forceListView && (
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">All Active Alerts ({alerts.length})</h2>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={toggleViewAllAlerts}
+              className="flex items-center gap-1"
+            >
+              <X className="h-4 w-4" />
+              <span>Close List</span>
+            </Button>
+          </div>
+        )}
         
         {alerts.map((alert) => (
           <Card key={alert.id} className={`border-l-4 ${getSeverityBorderColor(alert.severity)}`}>

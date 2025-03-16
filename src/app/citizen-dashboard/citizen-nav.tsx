@@ -41,11 +41,6 @@ const navItems = [
     icon: Flag,
   },
   {
-    title: 'Notifications',
-    href: '/citizen-dashboard/notifications',
-    icon: Bell,
-  },
-  {
     title: 'Profile',
     href: '/citizen-dashboard/profile',
     icon: User,
