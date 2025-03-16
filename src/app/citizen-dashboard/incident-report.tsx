@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,21 +8,31 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Upload, MapPin } from 'lucide-react'
+import mapboxgl from 'mapbox-gl'
+import 'mapbox-gl/dist/mapbox-gl.css'
 
 interface IncidentForm {
   title: string
   description: string
-  location: string
+  coordinates: [number, number] | null
   incident_type: string
   severity: 'LOW' | 'MODERATE' | 'HIGH' | 'EXTREME'
   photo?: File
+}
+
+// Saint Lucia bounds
+const SAINT_LUCIA_BOUNDS = {
+  north: 14.1,
+  south: 13.7,
+  west: -61.08,
+  east: -60.87
 }
 
 export function IncidentReport() {
   const [formData, setFormData] = useState<IncidentForm>({
     title: '',
     description: '',
-    location: '',
+    coordinates: null,
     incident_type: '',
     severity: 'LOW',
   })
@@ -30,11 +40,62 @@ export function IncidentReport() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  
+  const mapContainer = useRef<HTMLDivElement>(null)
+  const map = useRef<mapboxgl.Map | null>(null)
+  const marker = useRef<mapboxgl.Marker | null>(null)
+
+  useEffect(() => {
+    if (!mapContainer.current) return
+
+    mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || ''
+
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [-60.9765, 13.9094], // Saint Lucia center
+      zoom: 11,
+      maxBounds: [
+        [SAINT_LUCIA_BOUNDS.west, SAINT_LUCIA_BOUNDS.south], // Southwest coordinates
+        [SAINT_LUCIA_BOUNDS.east, SAINT_LUCIA_BOUNDS.north] // Northeast coordinates
+      ]
+    })
+
+    map.current.on('click', (e) => {
+      const { lng, lat } = e.lngLat
+      
+      // Update or create marker
+      if (marker.current) {
+        marker.current.setLngLat([lng, lat])
+      } else {
+        marker.current = new mapboxgl.Marker()
+          .setLngLat([lng, lat])
+          .addTo(map.current!)
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        coordinates: [lng, lat]
+      }))
+    })
+
+    return () => {
+      if (map.current) {
+        map.current.remove()
+      }
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
+
+    if (!formData.coordinates) {
+      setError('Please select a location on the map')
+      setLoading(false)
+      return
+    }
 
     try {
       const token = localStorage.getItem('accessToken')
@@ -43,10 +104,30 @@ export function IncidentReport() {
         return
       }
 
+      // Format as GeoJSON Feature for GeoFeatureModelSerializer
+      const geoJsonData = {
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: formData.coordinates
+        },
+        properties: {
+          title: formData.title,
+          description: formData.description,
+          incident_type: formData.incident_type,
+          severity: formData.severity
+        }
+      }
+
+      console.log('Sending data:', JSON.stringify(geoJsonData, null, 2))
+
+      // Always use FormData
       const formDataToSend = new FormData()
-      Object.entries(formData).forEach(([key, value]) => {
-        formDataToSend.append(key, value)
-      })
+      
+      // Add the GeoJSON data as a string in a field called 'data'
+      formDataToSend.append('data', JSON.stringify(geoJsonData))
+      
+      // Add the photo if it exists
       if (photo) {
         formDataToSend.append('photo', photo)
       }
@@ -54,29 +135,41 @@ export function IncidentReport() {
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/incidents/`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${token}`
+          // Don't set Content-Type, let the browser set it with the boundary
         },
-        body: formDataToSend,
+        body: formDataToSend
       })
 
       if (!response.ok) {
-        if (response.status === 401) {
-          setError('Please log in again')
-          return
+        const errorText = await response.text()
+        console.error('Error response:', errorText)
+        try {
+          const errorData = JSON.parse(errorText)
+          throw new Error(errorData.detail || 'Failed to submit incident report')
+        } catch (e) {
+          throw new Error('Failed to submit incident report: ' + errorText.substring(0, 100))
         }
-        throw new Error('Failed to submit incident report')
       }
 
       setSuccess(true)
       setFormData({
         title: '',
         description: '',
-        location: '',
+        coordinates: null,
         incident_type: '',
         severity: 'LOW',
       })
       setPhoto(null)
+      
+      // Reset marker
+      if (marker.current) {
+        marker.current.remove()
+        marker.current = null
+      }
+      
     } catch (err) {
+      console.error('Error submitting incident:', err)
       setError(err instanceof Error ? err.message : 'Failed to submit incident report')
     } finally {
       setLoading(false)
@@ -110,18 +203,16 @@ export function IncidentReport() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="location"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                placeholder="Enter location or address"
-                className="pl-9"
-                required
-              />
-            </div>
+            <Label>Location (Click on map to select)</Label>
+            <div 
+              ref={mapContainer} 
+              className="w-full h-[300px] rounded-md border border-input"
+            />
+            {formData.coordinates && (
+              <p className="text-sm text-muted-foreground">
+                Selected coordinates: {formData.coordinates[1].toFixed(6)}, {formData.coordinates[0].toFixed(6)}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

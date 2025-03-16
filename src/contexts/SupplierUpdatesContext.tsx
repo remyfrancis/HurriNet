@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState } from 'react'
+import { useAuth } from './AuthContext' // Import the useAuth hook
 
 type SupplierUpdate = {
   id: string
@@ -23,18 +24,25 @@ export function SupplierUpdatesProvider({ children }: { children: React.ReactNod
   const [updates, setUpdates] = useState<SupplierUpdate[]>([])
   const [lastUpdate, setLastUpdate] = useState<SupplierUpdate | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('disconnected')
+  const { isAuthenticated } = useAuth() // Get authentication state from AuthContext
 
   useEffect(() => {
     let ws: WebSocket | null = null;
+    let reconnectTimeout: NodeJS.Timeout | null = null;
     
     const connectWebSocket = () => {
       try {
         // Get the JWT token from localStorage
         const token = localStorage.getItem('accessToken');
         if (!token) {
-          console.error('No authentication token found');
+          console.log('No authentication token found yet, will retry when authenticated');
           setConnectionStatus('disconnected');
           return;
+        }
+
+        // Clear any existing connection
+        if (ws) {
+          ws.close();
         }
 
         // Use secure WebSocket if the backend URL is HTTPS
@@ -71,24 +79,35 @@ export function SupplierUpdatesProvider({ children }: { children: React.ReactNod
           console.log('WebSocket disconnected');
           setConnectionStatus('disconnected');
           // Try to reconnect after 5 seconds
-          setTimeout(connectWebSocket, 5000);
+          if (reconnectTimeout) clearTimeout(reconnectTimeout);
+          reconnectTimeout = setTimeout(connectWebSocket, 5000);
         };
       } catch (error) {
         console.error('Error creating WebSocket:', error);
         setConnectionStatus('disconnected');
         // Try to reconnect after 5 seconds
-        setTimeout(connectWebSocket, 5000);
+        if (reconnectTimeout) clearTimeout(reconnectTimeout);
+        reconnectTimeout = setTimeout(connectWebSocket, 5000);
       }
     };
 
-    connectWebSocket();
+    // Only attempt to connect if the user is authenticated
+    if (isAuthenticated) {
+      connectWebSocket();
+    } else {
+      console.log('Not authenticated, waiting for authentication before connecting WebSocket');
+      setConnectionStatus('disconnected');
+    }
 
     return () => {
       if (ws) {
         ws.close();
       }
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
     };
-  }, []);
+  }, [isAuthenticated]); // Depend on isAuthenticated state
 
   return (
     <SupplierUpdatesContext.Provider value={{ updates, lastUpdate, connectionStatus }}>
