@@ -35,6 +35,11 @@ class AlertViewSet(viewsets.ModelViewSet):
     def current(self, request):
         """Get all currently active alerts."""
         active_alerts = Alert.objects.filter(is_active=True).order_by("-created_at")
+
+        # If no active alerts, return an empty array
+        if not active_alerts.exists():
+            return Response([])
+
         serializer = self.get_serializer(active_alerts, many=True)
         return Response(serializer.data)
 
