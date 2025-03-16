@@ -1,6 +1,7 @@
 'use client'
 
 import Link from "next/link"
+import Image from "next/image"
 import { AlertTriangle, CloudLightning, Compass, LifeBuoy, MapPin, Shield, Users, Waves } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import LoginForm from "./auth/login/login-form"
@@ -14,10 +15,6 @@ export default function LandingPage() {
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2">
-            <Shield className="h-6 w-6 text-primary" />
-            <span className="text-lg font-bold">HurriNet</span>
-          </div>
           <nav className="hidden md:flex gap-6">
             <Link href="#features" className="text-sm font-medium hover:text-primary">
               Features
@@ -96,7 +93,7 @@ export default function LandingPage() {
                 Stay Safe from Hurricanes in Saint Lucia
               </h2>
               <p className="text-xl text-muted-foreground mb-8">
-                Access real-time alerts, evacuation routes, and emergency resources tailored for Saint Lucia's
+                Access real-time alerts, evacuation routes, and emergency resources for Saint Lucia's
                 communities.
               </p>
               <div className="grid grid-cols-2 gap-6">
@@ -116,8 +113,16 @@ export default function LandingPage() {
                 <span>Trusted by NEMO and local emergency response teams</span>
               </div>
             </div>
-            {/* Background pattern */}
-            <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] dark:bg-grid-slate-700/25 dark:[mask-image:linear-gradient(0deg,rgba(255,255,255,0.1),rgba(255,255,255,0.5))]" />
+            
+            <div 
+              style={{ 
+                backgroundImage: "url('/hurricane.jpg')",
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                opacity: 0.3
+              }} 
+              className="absolute inset-0" 
+            />
           </div>
         </section>
 
@@ -273,56 +278,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="login" className="w-full py-12 md:py-24 lg:py-32 bg-muted">
-          <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col items-center justify-center space-y-4 text-center">
-              <div className="space-y-2">
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Access Your Account</h2>
-                <p className="max-w-[600px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Log in to access personalized alerts, saved evacuation plans, and community resources
-                </p>
-              </div>
-            </div>
-            <div className="mx-auto mt-8 max-w-md">
-              <LoginForm />
-              <p className="mt-4 text-center text-sm text-muted-foreground">
-                Don't have an account?{" "}
-                <Link href="#register" className="text-primary underline underline-offset-4">
-                  Register now
-                </Link>
-              </p>
-            </div>
-          </div>
-        </section>
 
-        <section id="register" className="w-full py-12 md:py-24 lg:py-32">
-          <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex flex-col items-center justify-center space-y-4 text-center">
-              <div className="space-y-2">
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Join the Network</h2>
-                <p className="max-w-[600px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Create your account to receive personalized alerts and access all features
-                </p>
-              </div>
-            </div>
-            <div className="mx-auto mt-8 max-w-md">
-              <div className="space-y-4">
-                <div className="space-y-2 text-center">
-                  <h3 className="text-2xl font-bold">Create Your Account</h3>
-                  <p className="text-sm text-muted-foreground">Get started with your free account</p>
-                </div>
-                {/* Removed the unclosed form tag and the undeclared handleSubmit */}
-              </div>
-              <RegisterForm />
-              <p className="mt-4 text-center text-sm text-muted-foreground">
-                Already have an account?{" "}
-                <Link href="#login" className="text-primary underline underline-offset-4">
-                  Log in
-                </Link>
-              </p>
-            </div>
-          </div>
-        </section>
 
         <section id="contact" className="w-full py-12 md:py-24 lg:py-32 bg-muted">
           <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

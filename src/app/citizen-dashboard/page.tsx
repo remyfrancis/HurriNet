@@ -17,7 +17,7 @@ export default function CitizenDashboard() {
   useEffect(() => {
     const token = localStorage.getItem('accessToken')
     if (!token) {
-      router.push('/login')
+      router.push('/auth/login')
       return
     }
     setIsAuthenticated(true)
@@ -59,11 +59,6 @@ export default function CitizenDashboard() {
             </section>
           </div>
 
-          {/* Shelter Map Section */}
-          <section>
-            <h2 className="text-2xl font-bold mb-4">Nearest Shelters</h2>
-            {/* <ShelterMap /> */}
-          </section>
         </div>
       </main>
     </div>

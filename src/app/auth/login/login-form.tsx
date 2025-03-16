@@ -23,10 +23,8 @@ export default function LoginForm() {
     setIsLoading(true)
 
     try {
-      // First, get the JWT tokens
-      const loginUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/auth/login/`
-      
-      const response = await fetch(loginUrl, {
+      // Get JWT tokens using the token endpoint
+      const tokenResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/token/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -37,16 +35,16 @@ export default function LoginForm() {
         }),
       })
 
-      const data = await response.json()
+      const tokenData = await tokenResponse.json()
 
-      if (!response.ok) {
-        throw new Error(data.detail || 'Login failed')
+      if (!tokenResponse.ok) {
+        throw new Error(tokenData.detail || 'Login failed')
       }
 
-      // Now fetch the user data
+      // Now fetch the user data using the access token
       const userResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/me/`, {
         headers: {
-          'Authorization': `Bearer ${data.access}`,
+          'Authorization': `Bearer ${tokenData.access}`,
         },
       })
 
@@ -56,8 +54,8 @@ export default function LoginForm() {
 
       const userData = await userResponse.json()
       
-      // Use AuthContext login instead of localStorage
-      login(data.access, userData)
+      // Use AuthContext login
+      login(tokenData.access, userData)
 
       toast({
         title: "Success",

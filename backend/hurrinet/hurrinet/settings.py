@@ -61,7 +61,6 @@ INSTALLED_APPS = [
     "chats",
     "incidents",
     "weather",
-    "feed",
     "alerts",
     "resource_management",
     "shelters",

@@ -46,7 +46,7 @@ export function ShelterMap() {
 
         const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/shelters/`, {
           headers: {
-            'Authorization': token,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         })

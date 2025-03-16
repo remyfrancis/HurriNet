@@ -32,7 +32,7 @@ export function AlertsList() {
 
         const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/alerts/`, {
           headers: {
-            'Authorization': token,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         })

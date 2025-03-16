@@ -99,7 +99,12 @@ export class IncidentWebSocket {
    * - Sends any queued messages
    */
   private handleOpen() {
-    console.log('WebSocket connected successfully');
+    console.log('%c WebSocket Connected! 🚀', 'background: #4CAF50; color: white; padding: 4px; border-radius: 4px; font-weight: bold;');
+    console.log('Connection Details:', {
+      url: this.url,
+      state: this.getState(),
+      reconnectAttempts: this.reconnectAttempts
+    });
     this.isConnecting = false;
     this.reconnectAttempts = 0;
 
@@ -118,7 +123,12 @@ export class IncidentWebSocket {
    * - Limits maximum reconnection attempts
    */
   private handleClose(event: CloseEvent) {
-    console.log('WebSocket disconnected:', event.code, event.reason);
+    console.log('%c WebSocket Disconnected ❌', 'background: #f44336; color: white; padding: 4px; border-radius: 4px; font-weight: bold;');
+    console.log('Disconnection Details:', {
+      code: event.code,
+      reason: event.reason,
+      wasClean: event.wasClean
+    });
     this.isConnecting = false;
     this.ws = null;
 

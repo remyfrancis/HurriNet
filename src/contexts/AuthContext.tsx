@@ -7,6 +7,8 @@ interface User {
   id: number;
   email: string;
   role: string;
+  first_name?: string;
+  last_name?: string;
 }
 
 // Define the shape of our authentication context
@@ -31,7 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // On component mount, try to load saved authentication data
-    const storedToken = localStorage.getItem('token');
+    const storedToken = localStorage.getItem('accessToken');
     const storedUser = localStorage.getItem('user');
     
     if (storedToken && storedUser) {
@@ -42,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error('Error parsing stored user:', error);
         // If there's an error parsing the stored data, clear it
-        localStorage.removeItem('token');
+        localStorage.removeItem('accessToken');
         localStorage.removeItem('user');
       }
     }
@@ -56,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(newToken);
     setUser(newUser);
     // Persist auth data to localStorage
-    localStorage.setItem('token', newToken);
+    localStorage.setItem('accessToken', newToken);
     localStorage.setItem('user', JSON.stringify(newUser));
   };
 
@@ -66,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null);
     setUser(null);
     // Remove persisted auth data
-    localStorage.removeItem('token');
+    localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
   };
 

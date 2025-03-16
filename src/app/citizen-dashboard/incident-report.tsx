@@ -54,7 +54,7 @@ export function IncidentReport() {
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/incidents/`, {
         method: 'POST',
         headers: {
-          'Authorization': token,
+          'Authorization': `Bearer ${token}`,
         },
         body: formDataToSend,
       })

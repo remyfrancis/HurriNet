@@ -29,7 +29,7 @@ export default function AdminDashboard() {
     // Check if user is logged in and is an administrator
     const userStr = localStorage.getItem('user')
     if (!userStr) {
-      router.push('/login')
+      router.push('/auth/login')
       return
     }
 

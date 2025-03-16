@@ -42,7 +42,7 @@ export function CitizenFeed() {
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/social/posts/`, {
         headers: {
-          'Authorization': token,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       })
@@ -87,7 +87,7 @@ export function CitizenFeed() {
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/social/posts/`, {
         method: 'POST',
         headers: {
-          'Authorization': token,
+          'Authorization': `Bearer ${token}`,
         },
         body: formData,
       })
@@ -97,7 +97,8 @@ export function CitizenFeed() {
           setError('Please log in again')
           return
         }
-        throw new Error('Failed to create post')
+        const errorData = await response.json().catch(() => null)
+        throw new Error(errorData?.detail || 'Failed to create post')
       }
 
       const newPostData = await response.json()
@@ -173,7 +174,7 @@ export function CitizenFeed() {
         </Alert>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-4 h-[calc(100vh-400px)] overflow-y-auto pr-4">
         {posts.map((post) => (
           <Card key={post.id}>
             <CardContent className="pt-6">

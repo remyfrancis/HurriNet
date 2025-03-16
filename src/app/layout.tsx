@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/Sidebar/index"
 import { AlertProvider } from "@/contexts/AlertContext"
 import { SupplierUpdatesProvider } from "@/contexts/SupplierUpdatesContext";
 import { AuthProvider } from '@/contexts/AuthContext';
+import { Toaster } from "@/components/ui/toaster";
 
 // Load custom fonts using next/font
 const geistSans = localFont({
@@ -139,15 +140,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} font-sans`}>
       <body>
-        {/* Authentication provider wraps the entire app to manage auth state */}
         <AuthProvider>
-          {/* Alert provider for managing emergency alerts and notifications */}
           <AlertProvider>
-            {/* Provider for real-time supplier updates */}
             <SupplierUpdatesProvider>
               {children}
+              <Toaster />
             </SupplierUpdatesProvider>
           </AlertProvider>
         </AuthProvider>

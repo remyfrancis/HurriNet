@@ -17,7 +17,6 @@ from rest_framework_simplejwt.views import (
 )
 from accounts.views import UserViewSet
 from weather.views import WeatherViewSet
-from feed.views import FeedPostViewSet
 from django.http import HttpResponse
 
 
@@ -31,7 +30,6 @@ router = DefaultRouter()
 router.register(r"users", UserViewSet, basename="user")
 router.register(r"incidents", IncidentViewSet, basename="incident")
 router.register(r"weather", WeatherViewSet, basename="weather")
-router.register(r"feed/posts", FeedPostViewSet, basename="feed-post")
 router.register(r"alerts", AlertViewSet, basename="alert")
 
 urlpatterns = (

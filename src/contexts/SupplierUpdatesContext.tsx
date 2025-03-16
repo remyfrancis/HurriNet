@@ -30,16 +30,21 @@ export function SupplierUpdatesProvider({ children }: { children: React.ReactNod
     const connectWebSocket = () => {
       try {
         // Get the JWT token from localStorage
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('accessToken');
         if (!token) {
           console.error('No authentication token found');
           setConnectionStatus('disconnected');
           return;
         }
 
-        const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000';
+        // Use secure WebSocket if the backend URL is HTTPS
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = process.env.NEXT_PUBLIC_BACKEND_URL 
+          ? `${process.env.NEXT_PUBLIC_BACKEND_URL.replace(/^https?:/, wsProtocol)}`
+          : `${wsProtocol}//localhost:8000`;
+
         // Add token as a query parameter
-        ws = new WebSocket(`${wsUrl}/ws/incidents/?token=${token}`);
+        ws = new WebSocket(`${wsUrl}/ws/incidents/?token=${token.replace('Bearer ', '')}`);
         setConnectionStatus('connecting');
 
         ws.onopen = () => {

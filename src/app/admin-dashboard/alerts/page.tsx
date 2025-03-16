@@ -76,7 +76,7 @@ export default function AlertsPage() {
     try {
       const token = localStorage.getItem('accessToken')
       if (!token) {
-        router.push('/login')
+        router.push('/auth/login')
         return
       }
 
