@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { CitizenNav } from '../citizen-nav'
 import { CitizenFeed } from '../citizen-feed'
+import { HighlightedPosts } from '../highlighted-posts'
 import { useRouter } from 'next/navigation'
 
 export default function FeedPage() {
@@ -34,8 +35,17 @@ export default function FeedPage() {
             Connect with your community, share updates, and stay informed about local developments.
           </p>
           
-          <div className="max-w-3xl mx-auto">
-            <CitizenFeed />
+          <div className="flex gap-8">
+            {/* Left sidebar with highlighted posts */}
+            <div className="w-1/4">
+              <h2 className="text-xl font-bold mb-4">Highlighted Posts</h2>
+              <HighlightedPosts />
+            </div>
+            
+            {/* Main feed */}
+            <div className="flex-1">
+              <CitizenFeed />
+            </div>
           </div>
         </div>
       </main>
