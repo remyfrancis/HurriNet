@@ -65,6 +65,8 @@ INSTALLED_APPS = [
     "resource_management",
     "shelters",
     "social",
+    "core",
+    "feed",
 ]
 
 # Add JWT settings

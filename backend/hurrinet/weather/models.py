@@ -75,19 +75,22 @@ class WeatherData(models.Model):
             }
 
             values = data["data"]["values"]
-            
+
             # Create weather data with default values for missing fields
             weather_data = {
                 "temperature": values.get("temperature", 0),
-                "feels_like": values.get("temperatureApparent", values.get("temperature", 0)),
+                "feels_like": values.get(
+                    "temperatureApparent", values.get("temperature", 0)
+                ),
                 "humidity": values.get("humidity", 0),
                 "wind_speed": values.get("windSpeed", 0),
                 "wind_direction": values.get("windDirection", 0),
                 "conditions": condition_mapping.get(
-                    "cloudy" if values.get("cloudCover", 0) > 50 else "clear",
-                    "SUNNY"
+                    "cloudy" if values.get("cloudCover", 0) > 50 else "clear", "SUNNY"
                 ),
-                "pressure": values.get("pressureSurfaceLevel", 1013.25),  # Default sea level pressure
+                "pressure": values.get(
+                    "pressureSurfaceLevel", 1013.25
+                ),  # Default sea level pressure
                 "visibility": values.get("visibility", 10),  # Default good visibility
                 "location": location,
                 "latitude": lat,
@@ -179,8 +182,8 @@ class WeatherForecast(models.Model):
                         "precipitationProbability", 0
                     ),  # Default to 0 if not available
                     "wind_speed": values.get(
-                        "windSpeed", 0
-                    ),  # Default to 0 if not available
+                        "windSpeedAvg", values.get("windSpeed", 0)
+                    ),  # Try windSpeedAvg first, then windSpeed, default to 0
                     "humidity": values.get(
                         "humidity", 0
                     ),  # Default to 0 if not available
