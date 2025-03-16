@@ -161,8 +161,23 @@ class UserViewSet(viewsets.ModelViewSet):
             return User.objects.all()
         return User.objects.filter(id=self.request.user.id)
 
-    @action(detail=False, methods=["get"])
+    @action(detail=False, methods=["get", "patch"])
     def me(self, request):
-        """Get the current user's data."""
-        serializer = self.get_serializer(request.user)
+        """
+        Get or update the current user's data.
+
+        GET: Returns the current user's profile data
+        PATCH: Updates the current user's profile data
+        """
+        user = request.user
+
+        if request.method == "PATCH":
+            serializer = self.get_serializer(user, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # GET request
+        serializer = self.get_serializer(user)
         return Response(serializer.data)
