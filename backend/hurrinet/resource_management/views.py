@@ -6,12 +6,13 @@ from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
 import numpy as np
 from scipy.optimize import linear_sum_assignment
-from .models import Resource, InventoryItem, ResourceRequest, Distribution
+from .models import Resource, InventoryItem, ResourceRequest, Distribution, Supplier
 from .serializers import (
     ResourceSerializer,
     InventoryItemSerializer,
     ResourceRequestSerializer,
     DistributionSerializer,
+    SupplierSerializer,
 )
 
 
@@ -195,6 +196,35 @@ class DistributionViewSet(viewsets.ModelViewSet):
             {"error": "fulfilled_requests is required"},
             status=status.HTTP_400_BAD_REQUEST,
         )
+
+
+class SupplierViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing suppliers"""
+
+    queryset = Supplier.objects.all()
+    serializer_class = SupplierSerializer
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=False, methods=["get"])
+    def by_type(self, request):
+        """Get suppliers filtered by type"""
+        supplier_type = request.query_params.get("type")
+        if supplier_type:
+            suppliers = Supplier.objects.filter(supplier_type=supplier_type)
+        else:
+            suppliers = Supplier.objects.all()
+
+        serializer = self.get_serializer(suppliers, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["get"])
+    def items(self, request, pk=None):
+        """Get items supplied by this supplier"""
+        supplier = self.get_object()
+        items = supplier.supplied_items.all()
+
+        serializer = InventoryItemSerializer(items, many=True)
+        return Response(serializer.data)
 
 
 # Add a simple test endpoint to verify the API is working

@@ -9,7 +9,7 @@ except ImportError:
     # If GIS admin is not available, use regular ModelAdmin
     geo_admin_class = admin.ModelAdmin
 
-from .models import Resource, InventoryItem, ResourceRequest, Distribution
+from .models import Resource, InventoryItem, ResourceRequest, Distribution, Supplier
 
 
 @admin.register(Resource)
@@ -114,5 +114,33 @@ class DistributionAdmin(geo_admin_class):
             },
         ),
         ("Location", {"fields": ("location", "distribution_area")}),
+        ("Timestamps", {"fields": ("created_at", "updated_at")}),
+    )
+
+
+@admin.register(Supplier)
+class SupplierAdmin(geo_admin_class):
+    list_display = (
+        "name",
+        "supplier_type",
+        "status",
+        "contact_name",
+        "email",
+        "phone",
+    )
+    list_filter = ("supplier_type", "status")
+    search_fields = ("name", "description", "contact_name", "email", "address")
+    readonly_fields = ("created_at", "updated_at")
+    fieldsets = (
+        (
+            "Basic Information",
+            {"fields": ("name", "supplier_type", "description", "status")},
+        ),
+        (
+            "Contact Information",
+            {"fields": ("contact_name", "email", "phone", "website")},
+        ),
+        ("Location", {"fields": ("address", "location")}),
+        ("Additional Information", {"fields": ("notes",)}),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )

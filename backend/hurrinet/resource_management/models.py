@@ -111,6 +111,13 @@ class InventoryItem(models.Model):
         null=True,  # Making it nullable initially
         blank=True,
     )
+    supplier = models.ForeignKey(
+        "Supplier",
+        on_delete=models.SET_NULL,
+        related_name="supplied_items",
+        null=True,
+        blank=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -180,3 +187,48 @@ class Distribution(models.Model):
 
     def __str__(self):
         return f"Distribution at {self.location} ({self.fulfilled_requests}/{self.total_requests})"
+
+
+class Supplier(models.Model):
+    """Model for tracking suppliers of resources and inventory items"""
+
+    SUPPLIER_TYPES = [
+        ("MEDICAL", "Medical Supplies"),
+        ("FOOD", "Food and Water"),
+        ("SHELTER", "Shelter Materials"),
+        ("EQUIPMENT", "Equipment"),
+        ("OTHER", "Other Supplies"),
+    ]
+
+    STATUS_CHOICES = [
+        ("ACTIVE", "Active"),
+        ("INACTIVE", "Inactive"),
+        ("PENDING", "Pending Approval"),
+    ]
+
+    name = models.CharField(max_length=255)
+    supplier_type = models.CharField(max_length=20, choices=SUPPLIER_TYPES)
+    description = models.TextField(blank=True)
+    contact_name = models.CharField(max_length=255, blank=True)
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=50, blank=True)
+    address = models.CharField(max_length=255, blank=True)
+    location = models.PointField(
+        srid=4326, null=True, blank=True, help_text="Geographic coordinates"
+    )
+    website = models.URLField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="ACTIVE")
+    notes = models.TextField(blank=True)
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["supplier_type", "status"]),
+            models.Index(fields=["created_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.name} ({self.get_supplier_type_display()})"
