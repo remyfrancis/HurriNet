@@ -1,19 +1,14 @@
+"""
+Simplified admin configuration that doesn't rely on GIS-specific admin classes.
+Rename this file to admin.py to use it instead of the GIS-enabled version.
+"""
+
 from django.contrib import admin
-
-# Try to import GIS admin classes, fall back to regular ModelAdmin if not available
-try:
-    from django.contrib.gis.admin import GeoModelAdmin
-
-    geo_admin_class = GeoModelAdmin
-except ImportError:
-    # If GIS admin is not available, use regular ModelAdmin
-    geo_admin_class = admin.ModelAdmin
-
 from .models import Resource, InventoryItem, ResourceRequest, Distribution
 
 
 @admin.register(Resource)
-class ResourceAdmin(geo_admin_class):
+class ResourceAdmin(admin.ModelAdmin):
     list_display = (
         "name",
         "resource_type",
@@ -32,7 +27,7 @@ class ResourceAdmin(geo_admin_class):
             {"fields": ("name", "resource_type", "description", "status")},
         ),
         ("Capacity", {"fields": ("capacity", "current_count", "current_workload")}),
-        ("Location", {"fields": ("location", "address", "coverage_area")}),
+        ("Location", {"fields": ("address",)}),  # Removed GIS fields
         (
             "Assignment",
             {
@@ -57,7 +52,7 @@ class InventoryItemAdmin(admin.ModelAdmin):
 
 
 @admin.register(ResourceRequest)
-class ResourceRequestAdmin(geo_admin_class):
+class ResourceRequestAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "resource",
@@ -75,14 +70,14 @@ class ResourceRequestAdmin(geo_admin_class):
             "Request Details",
             {"fields": ("resource", "item", "quantity", "status", "priority")},
         ),
-        ("Location", {"fields": ("location",)}),
+        # Removed GIS fields
         ("Requester", {"fields": ("requester",)}),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
 
 
 @admin.register(Distribution)
-class DistributionAdmin(geo_admin_class):
+class DistributionAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "resource",
@@ -113,6 +108,6 @@ class DistributionAdmin(geo_admin_class):
                 )
             },
         ),
-        ("Location", {"fields": ("location", "distribution_area")}),
+        # Removed GIS fields
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )

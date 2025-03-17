@@ -1,12 +1,30 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { Boxes, ClipboardList, AlertTriangle, ShieldCheck, Share2, ShoppingCart, PhoneCall, Truck, RefreshCw } from 'lucide-react'
-import { IncidentTimeline } from "@/components/Incidents/IncidentTimeline"
+import { ResourceManagerNav } from './resource-manager-nav'
+import { useRouter } from 'next/navigation'
 
 export default function Dashboard() {
+  const router = useRouter()
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken')
+    if (!token) {
+      router.push('/auth/login')
+      return
+    }
+    setIsAuthenticated(true)
+  }, [router])
+
+  if (!isAuthenticated) {
+    return null
+  }
+
   const mainPanel = { 
     title: "Inventory Monitoring", 
     icon: Boxes,
@@ -148,33 +166,66 @@ export default function Dashboard() {
   ]
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6">Saint Lucia Emergency Management Dashboard</h1>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        {/* Left side - Incident Timeline */}
-        <div className="lg:col-span-1">
-          <IncidentTimeline className="h-[calc(100vh-8rem)]" />
-        </div>
+    <div className="flex min-h-screen">
+      <ResourceManagerNav />
+      <main className="flex-1">
+        <div className="container p-8">
+          <h1 className="text-2xl font-bold mb-6">Saint Lucia Emergency Management Dashboard</h1>
+          
+          <div className="space-y-6">
+            {/* Top section with main panel and side panels */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+              {/* Main inventory panel */}
+              <Card className="lg:col-span-3 hover:shadow-lg transition-shadow duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">{mainPanel.title}</CardTitle>
+                  <mainPanel.icon className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  {mainPanel.content}
+                </CardContent>
+              </Card>
 
-        {/* Right side - Main content */}
-        <div className="lg:col-span-3 space-y-4">
-          {/* Top section with main panel and side panels */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
-            {/* Main inventory panel */}
-            <Card className="lg:col-span-3 hover:shadow-lg transition-shadow duration-300">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{mainPanel.title}</CardTitle>
-                <mainPanel.icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                {mainPanel.content}
-              </CardContent>
-            </Card>
+              {/* Side panels stack */}
+              <div className="space-y-4">
+                {sidePanels.map((panel, index) => (
+                  <Card 
+                    key={index}
+                    className="hover:shadow-lg transition-shadow duration-300"
+                  >
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">{panel.title}</CardTitle>
+                      <panel.icon className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      {panel.content}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
 
-            {/* Side panels stack */}
-            <div className="space-y-4">
-              {sidePanels.map((panel, index) => (
+            {/* Main panels section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {mainPanels.map((panel, index) => (
+                <Card 
+                  key={index}
+                  className="hover:shadow-lg transition-shadow duration-300"
+                >
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">{panel.title}</CardTitle>
+                    <panel.icon className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    {panel.content}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Half width panels section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {halfWidthPanels.map((panel, index) => (
                 <Card 
                   key={index}
                   className="hover:shadow-lg transition-shadow duration-300"
@@ -190,44 +241,8 @@ export default function Dashboard() {
               ))}
             </div>
           </div>
-
-          {/* Main panels section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-            {mainPanels.map((panel, index) => (
-              <Card 
-                key={index}
-                className="hover:shadow-lg transition-shadow duration-300"
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">{panel.title}</CardTitle>
-                  <panel.icon className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  {panel.content}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Half width panels section */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {halfWidthPanels.map((panel, index) => (
-              <Card 
-                key={index}
-                className="hover:shadow-lg transition-shadow duration-300"
-              >
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">{panel.title}</CardTitle>
-                  <panel.icon className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  {panel.content}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

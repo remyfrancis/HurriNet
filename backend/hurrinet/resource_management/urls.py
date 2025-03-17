@@ -10,4 +10,12 @@ router.register(r"distributions", views.DistributionViewSet)
 
 urlpatterns = [
     path("", include(router.urls)),
+    # Explicitly register the with_status action
+    path(
+        "inventory/with_status/",
+        views.InventoryItemViewSet.as_view({"get": "with_status"}),
+        name="inventory-with-status",
+    ),
+    # Test endpoint
+    path("test/", views.api_test, name="api-test"),
 ]

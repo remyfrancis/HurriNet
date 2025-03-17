@@ -1,6 +1,6 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, permission_classes, action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
@@ -108,6 +108,57 @@ class InventoryItemViewSet(viewsets.ModelViewSet):
     serializer_class = InventoryItemSerializer
     permission_classes = [IsAuthenticated]
 
+    @action(detail=False, methods=["get"])
+    def with_status(self, request):
+        """Get inventory items with status information"""
+        items = InventoryItem.objects.all()
+
+        # Apply filters if provided
+        resource_type = request.query_params.get("resource_type")
+        if resource_type:
+            items = items.filter(resource__resource_type=resource_type)
+
+        # Filter by location if provided
+        location = request.query_params.get("location")
+        if location:
+            # Get the resource IDs that match the location name
+            resource_ids = Resource.objects.filter(
+                name__icontains=location
+            ).values_list("id", flat=True)
+            if resource_ids:
+                items = items.filter(resource__in=resource_ids)
+
+        status_filter = request.query_params.get("status")
+
+        # Serialize the data
+        serializer = InventoryItemSerializer(items, many=True)
+        data = serializer.data
+
+        # Add status information
+        for item in data:
+            quantity = item["quantity"]
+            capacity = item["capacity"]
+            ratio = quantity / capacity if capacity > 0 else 0
+
+            if ratio >= 0.7:
+                item["status"] = "Sufficient"
+            elif ratio >= 0.4:
+                item["status"] = "Moderate"
+            else:
+                item["status"] = "Low"
+
+            item["last_updated"] = (
+                item["updated_at"].split("T")[0] if "updated_at" in item else None
+            )
+
+        # Filter by status if requested
+        if status_filter and status_filter.lower() != "all":
+            data = [
+                item for item in data if item["status"].lower() == status_filter.lower()
+            ]
+
+        return Response(data)
+
 
 class ResourceRequestViewSet(viewsets.ModelViewSet):
     """ViewSet for managing resource requests"""
@@ -144,3 +195,11 @@ class DistributionViewSet(viewsets.ModelViewSet):
             {"error": "fulfilled_requests is required"},
             status=status.HTTP_400_BAD_REQUEST,
         )
+
+
+# Add a simple test endpoint to verify the API is working
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def api_test(request):
+    """Simple test endpoint to verify the API is working"""
+    return Response({"status": "ok", "message": "API is working correctly"})

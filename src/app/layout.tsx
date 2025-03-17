@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import { Stethoscope, Siren, Users2, Boxes, UsersIcon, SettingsIcon, BellIcon, HeartHandshake } from "lucide-react";
+import { Stethoscope, Siren, Users2, Boxes, UsersIcon, SettingsIcon, BellIcon, HeartHandshake, ActivityIcon } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar/index"
 import { AlertProvider } from "@/contexts/AlertContext"
 import { SupplierUpdatesProvider } from "@/contexts/SupplierUpdatesContext";
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 };
 
 // Define sidebar navigation items with their respective routes and icons
-const sidebarItems = [
+export const sidebarItems = [
   {
     key: "hq-dashboard",
     title: "HQ Dashboard",
@@ -123,6 +123,12 @@ const sidebarItems = [
         href: "/resource-manager-dashboard/procurement",
       },
     ],
+  },
+  {
+    key: "api-test",
+    title: "API Test",
+    href: "/api-test",
+    icon: <ActivityIcon className="w-4 h-4" />,
   },
   // Alert management temporarily disabled
   // {
