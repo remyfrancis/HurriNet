@@ -44,6 +44,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import 'leaflet/dist/leaflet.css'
+import { FeatureCollection, Feature, Polygon } from 'geojson'
 
 // Dynamically import Leaflet components to avoid SSR issues
 const MapContainer = dynamic(
@@ -124,7 +125,19 @@ function MapDialog({ isOpen, onClose, distribution }: MapDialogProps) {
               {/* Distribution Coverage Area */}
               {distribution.distribution_area && (
                 <GeoJSON
-                  data={distribution.distribution_area}
+                  data={
+                    {
+                      type: "FeatureCollection",
+                      features: [{
+                        type: "Feature",
+                        properties: {},
+                        geometry: {
+                          type: "Polygon",
+                          coordinates: distribution.distribution_area.coordinates
+                        }
+                      }]
+                    } as FeatureCollection<Polygon>
+                  }
                   style={{
                     fillColor: '#2563eb',
                     fillOpacity: 0.2,
@@ -168,6 +181,16 @@ interface Distribution {
   distribution_area?: {
     type: string;
     coordinates: number[][][]; // GeoJSON Polygon coordinates
+  };
+  geometry?: string | {
+    type: string;
+    coordinates: number[];
+  };
+  properties?: {
+    geometry?: string | {
+      type: string;
+      coordinates: number[];
+    };
   };
 }
 

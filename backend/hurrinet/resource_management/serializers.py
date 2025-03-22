@@ -55,6 +55,7 @@ class InventoryItemSerializer(serializers.ModelSerializer):
 
     resource = ResourceMinimalSerializer()
     supplier = SupplierMinimalSerializer()
+    resource_name = serializers.CharField(source="resource.name", read_only=True)
 
     class Meta:
         model = InventoryItem
@@ -65,6 +66,7 @@ class InventoryItemSerializer(serializers.ModelSerializer):
             "capacity",
             "unit",
             "resource",
+            "resource_name",
             "supplier",
         ]
 
@@ -130,8 +132,8 @@ class DistributionSerializer(GeoFeatureModelSerializer):
 class SupplierSerializer(GeoFeatureModelSerializer):
     """Serializer for suppliers with geographic data"""
 
-    supplier_type = serializers.CharField(source="get_supplier_type_display")
-    status = serializers.CharField(source="get_status_display")
+    supplier_type_display = serializers.CharField(source="get_supplier_type_display")
+    status_display = serializers.CharField(source="get_status_display")
 
     class Meta:
         model = Supplier
@@ -140,9 +142,16 @@ class SupplierSerializer(GeoFeatureModelSerializer):
             "id",
             "name",
             "supplier_type",
+            "supplier_type_display",
             "description",
             "contact_name",
             "email",
             "phone",
+            "address",
+            "website",
             "status",
+            "status_display",
+            "notes",
+            "created_at",
+            "updated_at",
         ]
