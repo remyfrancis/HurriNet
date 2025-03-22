@@ -4,11 +4,18 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { Boxes, ClipboardList, AlertTriangle, ShieldCheck, Share2, ShoppingCart, PhoneCall, Truck, RefreshCw } from 'lucide-react'
+import { Boxes, ClipboardList, AlertTriangle, ShieldCheck, Share2, ShoppingCart, PhoneCall, Truck, RefreshCw, MapPin } from 'lucide-react'
 import { ResourceManagerNav } from './resource-manager-nav'
 import { useRouter } from 'next/navigation'
+import { Metadata } from 'next'
+import { DashboardResourceMap } from '@/components/DashboardResourceMap'
 
-export default function Dashboard() {
+// export const metadata: Metadata = {
+//   title: 'Resource Manager Dashboard',
+//   description: 'Resource management and distribution dashboard',
+// }
+
+export default function ResourceManagerDashboard() {
   const router = useRouter()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
@@ -26,34 +33,11 @@ export default function Dashboard() {
   }
 
   const mainPanel = { 
-    title: "Inventory Monitoring", 
-    icon: Boxes,
+    title: "Resource Locations", 
+    icon: MapPin,
     content: (
-      <div>
-        <p className="mb-2">Current stock levels:</p>
-        <div className="space-y-2">
-          <div>
-            <div className="flex justify-between mb-1 text-sm">
-              <span>Water</span>
-              <span>75%</span>
-            </div>
-            <Progress value={75} className="w-full" />
-          </div>
-          <div>
-            <div className="flex justify-between mb-1 text-sm">
-              <span>Food</span>
-              <span>60%</span>
-            </div>
-            <Progress value={60} className="w-full" />
-          </div>
-          <div>
-            <div className="flex justify-between mb-1 text-sm">
-              <span>Medical Supplies</span>
-              <span>40%</span>
-            </div>
-            <Progress value={40} className="w-full" />
-          </div>
-        </div>
+      <div className="h-[300px]">
+        <DashboardResourceMap />
       </div>
     )
   }
@@ -175,7 +159,7 @@ export default function Dashboard() {
           <div className="space-y-6">
             {/* Top section with main panel and side panels */}
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-              {/* Main inventory panel */}
+              {/* Main map panel */}
               <Card className="lg:col-span-3 hover:shadow-lg transition-shadow duration-300">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">{mainPanel.title}</CardTitle>

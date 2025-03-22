@@ -3,6 +3,24 @@ from rest_framework_gis.serializers import GeoFeatureModelSerializer
 from .models import Resource, InventoryItem, ResourceRequest, Distribution, Supplier
 
 
+class ResourceMinimalSerializer(serializers.ModelSerializer):
+    """Minimal serializer for resource references"""
+
+    resource_type = serializers.CharField(source="get_resource_type_display")
+
+    class Meta:
+        model = Resource
+        fields = ["id", "name", "resource_type"]
+
+
+class SupplierMinimalSerializer(serializers.ModelSerializer):
+    """Minimal serializer for supplier references"""
+
+    class Meta:
+        model = Supplier
+        fields = ["id", "name"]
+
+
 class ResourceSerializer(GeoFeatureModelSerializer):
     """Serializer for resources with geographic data"""
 
@@ -28,7 +46,7 @@ class ResourceSerializer(GeoFeatureModelSerializer):
 
     def get_location(self, obj):
         if obj.location:
-            return [obj.location.y, obj.location.x]  # Returns [latitude, longitude]
+            return [obj.location.x, obj.location.y]  # Returns [longitude, latitude]
         return None
 
 
@@ -128,21 +146,3 @@ class SupplierSerializer(GeoFeatureModelSerializer):
             "phone",
             "status",
         ]
-
-
-class ResourceMinimalSerializer(serializers.ModelSerializer):
-    """Minimal serializer for resource references"""
-
-    resource_type = serializers.CharField(source="get_resource_type_display")
-
-    class Meta:
-        model = Resource
-        fields = ["id", "name", "resource_type"]
-
-
-class SupplierMinimalSerializer(serializers.ModelSerializer):
-    """Minimal serializer for supplier references"""
-
-    class Meta:
-        model = Supplier
-        fields = ["id", "name"]

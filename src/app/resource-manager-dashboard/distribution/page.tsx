@@ -66,63 +66,82 @@ const Popup = dynamic(
   { ssr: false }
 )
 
+const GeoJSON = dynamic(
+  () => import('react-leaflet').then((mod) => mod.GeoJSON),
+  { ssr: false }
+)
+
 interface MapDialogProps {
-  isOpen: boolean
-  onClose: () => void
-  location: {
-    type: string
-    coordinates: [number, number] // [longitude, latitude]
-  }
-  resourceName: string
+  isOpen: boolean;
+  onClose: () => void;
+  distribution: Distribution;  // Pass the entire distribution object instead of just location
 }
 
-function MapDialog({ isOpen, onClose, location, resourceName }: MapDialogProps) {
-  // Parse coordinates from either GeoJSON or WKT format
-  const getCoordinates = (location: any): [number, number] => {
-    // If location is a GeoJSON object
-    if (typeof location === 'object' && location.coordinates) {
-      return [location.coordinates[1], location.coordinates[0]];
+function MapDialog({ isOpen, onClose, distribution }: MapDialogProps) {
+  // Get resource location coordinates
+  const getResourceLocation = (dist: Distribution): [number, number] => {
+    if (dist.resource_location?.coordinates) {
+      return [dist.resource_location.coordinates[1], dist.resource_location.coordinates[0]];
     }
-    
-    // If location is in properties
-    if (location.properties?.geometry) {
-      if (typeof location.properties.geometry === 'object') {
-        return [location.properties.geometry.coordinates[1], location.properties.geometry.coordinates[0]];
-      }
-    }
-    
-    // Default to Saint Lucia's coordinates if no valid location found
+    // Fallback to Saint Lucia's coordinates
     return [13.9094, -60.9789];
   };
 
-  console.log('Location data:', location);
-  const coordinates = getCoordinates(location);
-  console.log('Parsed coordinates:', coordinates);
+  const coordinates = getResourceLocation(distribution);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{resourceName} Location</DialogTitle>
+          <DialogTitle>{distribution.resource_name} Distribution</DialogTitle>
+          <DialogDescription>
+            Resource location and distribution coverage area
+          </DialogDescription>
         </DialogHeader>
         <div className="h-[500px] w-full relative">
           {typeof window !== 'undefined' && (
             <MapContainer
               center={coordinates}
-              zoom={15}
+              zoom={13}
               style={{ height: '100%', width: '100%' }}
             >
               <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               />
+              {/* Resource Location Marker */}
               <Marker position={coordinates}>
                 <Popup>
                   <div className="p-2">
-                    <h3 className="font-medium">{resourceName}</h3>
+                    <h3 className="font-medium">{distribution.resource_name}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Fulfillment: {distribution.fulfilled_requests}/{distribution.total_requests}
+                    </p>
                   </div>
                 </Popup>
               </Marker>
+
+              {/* Distribution Coverage Area */}
+              {distribution.distribution_area && (
+                <GeoJSON
+                  data={distribution.distribution_area}
+                  style={{
+                    fillColor: '#2563eb',
+                    fillOpacity: 0.2,
+                    color: '#1d4ed8',
+                    weight: 2
+                  }}
+                >
+                  <Popup>
+                    <div className="p-2">
+                      <h3 className="font-medium">Distribution Coverage Area</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Completion Rate: {distribution.completion_rate}%
+                      </p>
+                    </div>
+                  </Popup>
+                </GeoJSON>
+              )}
             </MapContainer>
           )}
         </div>
@@ -142,23 +161,13 @@ interface Distribution {
   created_at: string;
   updated_at: string;
   // GeoJSON properties
-  geometry?: {
+  resource_location?: {
     type: string;
     coordinates: [number, number]; // [longitude, latitude]
   };
-  properties?: {
-    id: number;
-    resource: number;
-    resource_name: string;
-    total_requests: number;
-    fulfilled_requests: number;
-    completion_rate: number;
-    created_at: string;
-    updated_at: string;
-    geometry: string | {
-      type: string;
-      coordinates: [number, number];
-    };
+  distribution_area?: {
+    type: string;
+    coordinates: number[][][]; // GeoJSON Polygon coordinates
   };
 }
 
@@ -1097,7 +1106,7 @@ export default function DistributionPage() {
                                   <Edit className="h-4 w-4 mr-1" /> Edit
                                 </Button>
                                 
-                                {dist.geometry && (
+                                {dist.resource_location && (
                                   <Button 
                                     variant="outline" 
                                     size="sm"
@@ -1122,15 +1131,14 @@ export default function DistributionPage() {
             )}
             
             {/* Map Dialog */}
-            {selectedDistribution && selectedDistribution.geometry && (
+            {selectedDistribution && (
               <MapDialog
                 isOpen={isMapDialogOpen}
                 onClose={() => {
                   setIsMapDialogOpen(false);
                   setSelectedDistribution(null);
                 }}
-                location={selectedDistribution.geometry}
-                resourceName={selectedDistribution.resource_name}
+                distribution={selectedDistribution}
               />
             )}
             

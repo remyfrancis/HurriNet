@@ -17,6 +17,10 @@ class ResourceAdmin(geo_admin_class):
     list_display = (
         "name",
         "resource_type",
+        "location",
+        "address",
+        "coverage_area",
+        "assigned_to",
         "status",
         "capacity",
         "current_count",
@@ -109,7 +113,6 @@ class DistributionAdmin(geo_admin_class):
                     "resource",
                     "total_requests",
                     "fulfilled_requests",
-                    "completion_rate",
                 )
             },
         ),
