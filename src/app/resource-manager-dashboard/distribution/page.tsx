@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { ResourceManagerNav } from '../resource-manager-nav'
 import { useRouter } from 'next/navigation'
+import dynamic from 'next/dynamic'
 import {
   Table,
   TableBody,
@@ -42,6 +43,93 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import 'leaflet/dist/leaflet.css'
+
+// Dynamically import Leaflet components to avoid SSR issues
+const MapContainer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.MapContainer),
+  { ssr: false }
+)
+
+const TileLayer = dynamic(
+  () => import('react-leaflet').then((mod) => mod.TileLayer),
+  { ssr: false }
+)
+
+const Marker = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Marker),
+  { ssr: false }
+)
+
+const Popup = dynamic(
+  () => import('react-leaflet').then((mod) => mod.Popup),
+  { ssr: false }
+)
+
+interface MapDialogProps {
+  isOpen: boolean
+  onClose: () => void
+  location: {
+    type: string
+    coordinates: [number, number] // [longitude, latitude]
+  }
+  resourceName: string
+}
+
+function MapDialog({ isOpen, onClose, location, resourceName }: MapDialogProps) {
+  // Parse coordinates from either GeoJSON or WKT format
+  const getCoordinates = (location: any): [number, number] => {
+    // If location is a GeoJSON object
+    if (typeof location === 'object' && location.coordinates) {
+      return [location.coordinates[1], location.coordinates[0]];
+    }
+    
+    // If location is in properties
+    if (location.properties?.geometry) {
+      if (typeof location.properties.geometry === 'object') {
+        return [location.properties.geometry.coordinates[1], location.properties.geometry.coordinates[0]];
+      }
+    }
+    
+    // Default to Saint Lucia's coordinates if no valid location found
+    return [13.9094, -60.9789];
+  };
+
+  console.log('Location data:', location);
+  const coordinates = getCoordinates(location);
+  console.log('Parsed coordinates:', coordinates);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>{resourceName} Location</DialogTitle>
+        </DialogHeader>
+        <div className="h-[500px] w-full relative">
+          {typeof window !== 'undefined' && (
+            <MapContainer
+              center={coordinates}
+              zoom={15}
+              style={{ height: '100%', width: '100%' }}
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              />
+              <Marker position={coordinates}>
+                <Popup>
+                  <div className="p-2">
+                    <h3 className="font-medium">{resourceName}</h3>
+                  </div>
+                </Popup>
+              </Marker>
+            </MapContainer>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 // Define the distribution type
 interface Distribution {
@@ -67,6 +155,10 @@ interface Distribution {
     completion_rate: number;
     created_at: string;
     updated_at: string;
+    geometry: string | {
+      type: string;
+      coordinates: [number, number];
+    };
   };
 }
 
@@ -88,6 +180,8 @@ export default function DistributionPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [distributionToEdit, setDistributionToEdit] = useState<Distribution | null>(null)
   const [newFulfilledValue, setNewFulfilledValue] = useState(0)
+  const [isMapDialogOpen, setIsMapDialogOpen] = useState(false)
+  const [selectedDistribution, setSelectedDistribution] = useState<Distribution | null>(null)
   
   // Form state for new distribution
   const [newDistribution, setNewDistribution] = useState({
@@ -1008,6 +1102,10 @@ export default function DistributionPage() {
                                     variant="outline" 
                                     size="sm"
                                     className="flex items-center"
+                                    onClick={() => {
+                                      setSelectedDistribution(dist);
+                                      setIsMapDialogOpen(true);
+                                    }}
                                   >
                                     <MapPin className="h-4 w-4 mr-1" /> View Map
                                   </Button>
@@ -1021,6 +1119,19 @@ export default function DistributionPage() {
                   </Table>
                 </CardContent>
               </Card>
+            )}
+            
+            {/* Map Dialog */}
+            {selectedDistribution && selectedDistribution.geometry && (
+              <MapDialog
+                isOpen={isMapDialogOpen}
+                onClose={() => {
+                  setIsMapDialogOpen(false);
+                  setSelectedDistribution(null);
+                }}
+                location={selectedDistribution.geometry}
+                resourceName={selectedDistribution.resource_name}
+              />
             )}
             
             {/* Edit Dialog for direct input */}

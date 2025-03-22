@@ -6,10 +6,9 @@ from .models import Resource, InventoryItem, ResourceRequest, Distribution, Supp
 class ResourceSerializer(GeoFeatureModelSerializer):
     """Serializer for resources with geographic data"""
 
-    status_display = serializers.CharField(source="get_status_display", read_only=True)
-    resource_type_display = serializers.CharField(
-        source="get_resource_type_display", read_only=True
-    )
+    resource_type = serializers.CharField(source="get_resource_type_display")
+    status = serializers.CharField(source="get_status_display")
+    location = serializers.SerializerMethodField()
 
     class Meta:
         model = Resource
@@ -18,27 +17,26 @@ class ResourceSerializer(GeoFeatureModelSerializer):
             "id",
             "name",
             "resource_type",
-            "resource_type_display",
             "description",
             "status",
-            "status_display",
             "capacity",
             "current_count",
             "current_workload",
+            "location",
             "address",
-            "coverage_area",
-            "assigned_to",
-            "managed_by",
-            "last_assignment_cost",
-            "created_at",
-            "updated_at",
         ]
+
+    def get_location(self, obj):
+        if obj.location:
+            return [obj.location.y, obj.location.x]  # Returns [latitude, longitude]
+        return None
 
 
 class InventoryItemSerializer(serializers.ModelSerializer):
     """Serializer for inventory items"""
 
-    resource_name = serializers.CharField(source="resource.name", read_only=True)
+    resource = ResourceMinimalSerializer()
+    supplier = SupplierMinimalSerializer()
 
     class Meta:
         model = InventoryItem
@@ -46,39 +44,41 @@ class InventoryItemSerializer(serializers.ModelSerializer):
             "id",
             "name",
             "quantity",
-            "unit",
             "capacity",
+            "unit",
             "resource",
-            "resource_name",
-            "created_at",
-            "updated_at",
+            "supplier",
         ]
 
 
-class ResourceRequestSerializer(GeoFeatureModelSerializer):
-    """Serializer for resource requests with geographic data"""
+class ResourceRequestSerializer(serializers.ModelSerializer):
+    """Serializer for resource requests"""
 
-    status_display = serializers.CharField(source="get_status_display", read_only=True)
-    resource_name = serializers.CharField(source="resource.name", read_only=True)
-    requester_email = serializers.CharField(source="requester.email", read_only=True)
+    item = serializers.CharField(source="item.name")
+    supplier = serializers.CharField(source="supplier.name")
+    destination = serializers.CharField(source="resource.name", read_only=True)
 
     class Meta:
         model = ResourceRequest
-        geo_field = "location"
         fields = [
             "id",
-            "resource",
-            "resource_name",
             "item",
             "quantity",
-            "requester",
-            "requester_email",
+            "supplier",
             "status",
-            "status_display",
-            "priority",
-            "created_at",
-            "updated_at",
+            "destination",
         ]
+
+    def create(self, validated_data):
+        item_name = validated_data.pop("item")["name"]
+        supplier_name = validated_data.pop("supplier")["name"]
+
+        item = InventoryItem.objects.get(name=item_name)
+        supplier = Supplier.objects.get(name=supplier_name)
+
+        return ResourceRequest.objects.create(
+            item=item, supplier=supplier, **validated_data
+        )
 
 
 class DistributionSerializer(GeoFeatureModelSerializer):
@@ -112,11 +112,8 @@ class DistributionSerializer(GeoFeatureModelSerializer):
 class SupplierSerializer(GeoFeatureModelSerializer):
     """Serializer for suppliers with geographic data"""
 
-    status_display = serializers.CharField(source="get_status_display", read_only=True)
-    supplier_type_display = serializers.CharField(
-        source="get_supplier_type_display", read_only=True
-    )
-    supplied_items_count = serializers.SerializerMethodField()
+    supplier_type = serializers.CharField(source="get_supplier_type_display")
+    status = serializers.CharField(source="get_status_display")
 
     class Meta:
         model = Supplier
@@ -125,21 +122,27 @@ class SupplierSerializer(GeoFeatureModelSerializer):
             "id",
             "name",
             "supplier_type",
-            "supplier_type_display",
             "description",
             "contact_name",
             "email",
             "phone",
-            "address",
-            "website",
             "status",
-            "status_display",
-            "notes",
-            "supplied_items_count",
-            "created_at",
-            "updated_at",
         ]
 
-    def get_supplied_items_count(self, obj):
-        """Get count of items supplied by this supplier"""
-        return obj.supplied_items.count()
+
+class ResourceMinimalSerializer(serializers.ModelSerializer):
+    """Minimal serializer for resource references"""
+
+    resource_type = serializers.CharField(source="get_resource_type_display")
+
+    class Meta:
+        model = Resource
+        fields = ["id", "name", "resource_type"]
+
+
+class SupplierMinimalSerializer(serializers.ModelSerializer):
+    """Minimal serializer for supplier references"""
+
+    class Meta:
+        model = Supplier
+        fields = ["id", "name"]

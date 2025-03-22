@@ -41,11 +41,6 @@ const navItems = [
     icon: Truck,
   },
   {
-    title: 'Emergency Requests',
-    href: '/resource-manager-dashboard/emergency-requests',
-    icon: AlertTriangle,
-  },
-  {
     title: 'Suppliers',
     href: '/resource-manager-dashboard/suppliers',
     icon: PhoneCall,

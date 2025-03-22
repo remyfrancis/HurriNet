@@ -23,6 +23,13 @@ class ResourceViewSet(viewsets.ModelViewSet):
     serializer_class = ResourceSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        queryset = Resource.objects.all()
+        resource_type = self.request.query_params.get("resource_type", None)
+        if resource_type:
+            queryset = queryset.filter(resource_type=resource_type)
+        return queryset
+
     @action(detail=False, methods=["post"])
     def allocate_resources(self, request):
         """
@@ -112,27 +119,14 @@ class InventoryItemViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"])
     def with_status(self, request):
         """Get inventory items with status information"""
-        items = InventoryItem.objects.all()
+        items = self.get_queryset()
 
-        # Apply filters if provided
+        # Apply filters
         resource_type = request.query_params.get("resource_type")
         if resource_type:
             items = items.filter(resource__resource_type=resource_type)
 
-        # Filter by location if provided
-        location = request.query_params.get("location")
-        if location:
-            # Get the resource IDs that match the location name
-            resource_ids = Resource.objects.filter(
-                name__icontains=location
-            ).values_list("id", flat=True)
-            if resource_ids:
-                items = items.filter(resource__in=resource_ids)
-
-        status_filter = request.query_params.get("status")
-
-        # Serialize the data
-        serializer = InventoryItemSerializer(items, many=True)
+        serializer = self.get_serializer(items, many=True)
         data = serializer.data
 
         # Add status information
@@ -152,12 +146,6 @@ class InventoryItemViewSet(viewsets.ModelViewSet):
                 item["updated_at"].split("T")[0] if "updated_at" in item else None
             )
 
-        # Filter by status if requested
-        if status_filter and status_filter.lower() != "all":
-            data = [
-                item for item in data if item["status"].lower() == status_filter.lower()
-            ]
-
         return Response(data)
 
 
@@ -168,8 +156,11 @@ class ResourceRequestViewSet(viewsets.ModelViewSet):
     serializer_class = ResourceRequestSerializer
     permission_classes = [IsAuthenticated]
 
-    def perform_create(self, serializer):
-        serializer.save(requester=self.request.user)
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class DistributionViewSet(viewsets.ModelViewSet):
@@ -205,17 +196,12 @@ class SupplierViewSet(viewsets.ModelViewSet):
     serializer_class = SupplierSerializer
     permission_classes = [IsAuthenticated]
 
-    @action(detail=False, methods=["get"])
-    def by_type(self, request):
-        """Get suppliers filtered by type"""
-        supplier_type = request.query_params.get("type")
+    def get_queryset(self):
+        queryset = Supplier.objects.all()
+        supplier_type = self.request.query_params.get("supplier_type", None)
         if supplier_type:
-            suppliers = Supplier.objects.filter(supplier_type=supplier_type)
-        else:
-            suppliers = Supplier.objects.all()
-
-        serializer = self.get_serializer(suppliers, many=True)
-        return Response(serializer.data)
+            queryset = queryset.filter(supplier_type=supplier_type)
+        return queryset
 
     @action(detail=True, methods=["get"])
     def items(self, request, pk=None):
@@ -233,3 +219,69 @@ class SupplierViewSet(viewsets.ModelViewSet):
 def api_test(request):
     """Simple test endpoint to verify the API is working"""
     return Response({"status": "ok", "message": "API is working correctly"})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def allocate_procurement_resources(request):
+    """
+    Allocate procurement resources to destinations using the Hungarian Algorithm.
+    """
+    try:
+        requests_data = request.data.get("requests", [])
+        resources_data = request.data.get("resources", [])
+
+        if not requests_data or not resources_data:
+            return Response(
+                {"error": "Both requests and resources are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Create cost matrix
+        cost_matrix = np.zeros((len(requests_data), len(resources_data)))
+
+        for i, req in enumerate(requests_data):
+            quantity = req["quantity"]
+            priority = req.get("priority", 1)
+
+            for j, res in enumerate(resources_data):
+                # Convert location to Point
+                res_location = Point(res["location"][1], res["location"][0])
+
+                # Calculate cost based on:
+                # 1. Resource capacity vs requested quantity
+                # 2. Request priority
+                capacity_ratio = min(res["capacity"] / quantity, 1.0)
+                cost = (1.0 / capacity_ratio) * (1.0 / priority)
+                cost_matrix[i][j] = cost
+
+        # Apply Hungarian Algorithm
+        row_ind, col_ind = linear_sum_assignment(cost_matrix)
+
+        # Create assignments
+        assignments = []
+        for i, j in zip(row_ind, col_ind):
+            if i < len(requests_data) and j < len(resources_data):
+                assignments.append(
+                    {
+                        "request_id": requests_data[i]["id"],
+                        "resource_id": resources_data[j]["id"],
+                        "resource_name": resources_data[j]["name"],
+                        "cost": float(cost_matrix[i][j]),
+                    }
+                )
+
+        # Update resource requests in database
+        for assignment in assignments:
+            request = ResourceRequest.objects.filter(
+                id=assignment["request_id"]
+            ).first()
+            if request:
+                request.status = "allocated"
+                request.resource_id = assignment["resource_id"]
+                request.save()
+
+        return Response(assignments)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
