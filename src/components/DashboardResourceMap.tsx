@@ -47,7 +47,11 @@ interface Resource {
   };
 }
 
-export function DashboardResourceMap() {
+interface DashboardResourceMapProps {
+  onLocationSelect: (resourceId: number) => void;
+}
+
+export function DashboardResourceMap({ onLocationSelect }: DashboardResourceMapProps) {
   const mapRef = useRef<MapRef>(null);
   const [resources, setResources] = useState<Resource[]>([]);
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
@@ -59,8 +63,8 @@ export function DashboardResourceMap() {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) {
-        const defaultResources = defaultResourceLocations.map((loc, index) => ({
-          id: index + 1,
+        const defaultResources = defaultResourceLocations.map(loc => ({
+          id: loc.id,  // Use the ID from default locations
           name: loc.name,
           resource_type: loc.type,
           description: `Default ${loc.type.toLowerCase()} location`,
@@ -71,6 +75,7 @@ export function DashboardResourceMap() {
           },
           coverage_area: undefined
         }));
+        console.log('Using default resources:', defaultResources);
         setResources(defaultResources);
         return;
       }
@@ -83,8 +88,8 @@ export function DashboardResourceMap() {
       });
 
       if (!response.ok) {
-        const defaultResources = defaultResourceLocations.map((loc, index) => ({
-          id: index + 1,
+        const defaultResources = defaultResourceLocations.map(loc => ({
+          id: loc.id,  // Use the ID from default locations
           name: loc.name,
           resource_type: loc.type,
           description: `Default ${loc.type.toLowerCase()} location`,
@@ -95,6 +100,7 @@ export function DashboardResourceMap() {
           },
           coverage_area: undefined
         }));
+        console.log('Using default resources (API error):', defaultResources);
         setResources(defaultResources);
         return;
       }
@@ -104,11 +110,9 @@ export function DashboardResourceMap() {
       if (data.type === 'FeatureCollection' && Array.isArray(data.features)) {
         console.log('Raw features:', data.features);
         const processedResources = data.features.map((feature: GeoJSONFeature) => {
-          console.log('Feature geometry:', feature.geometry);
-          // Handle case where geometry is directly the coordinates array
+          console.log('Processing feature:', feature);
           const coordinates = Array.isArray(feature.geometry) ? feature.geometry : feature.geometry.coordinates;
-          console.log('Coordinates to use:', coordinates);
-          return ({
+          return {
             id: feature.properties.id,
             name: feature.properties.name,
             resource_type: feature.properties.resource_type,
@@ -118,11 +122,8 @@ export function DashboardResourceMap() {
               type: 'Point',
               coordinates: coordinates
             },
-            coverage_area: feature.properties.coverage_area ? {
-              type: 'Polygon',
-              coordinates: feature.properties.coverage_area.coordinates
-            } : undefined
-          });
+            coverage_area: feature.properties.coverage_area
+          };
         });
         console.log('Processed resources:', processedResources);
         setResources(processedResources);
@@ -132,22 +133,19 @@ export function DashboardResourceMap() {
       }
     } catch (err) {
       console.error('Error fetching resources:', err);
-      const defaultResources = defaultResourceLocations.map((loc, index) => {
-        console.log('Default location coordinates:', loc.coordinates);
-        return ({
-          id: index + 1,
-          name: loc.name,
-          resource_type: loc.type,
-          description: `Default ${loc.type.toLowerCase()} location`,
-          status: 'AVAILABLE',
-          location: {
-            type: 'Point',
-            coordinates: loc.coordinates as [number, number]
-          },
-          coverage_area: undefined
-        });
-      });
-      console.log('Using default resources:', defaultResources);
+      const defaultResources = defaultResourceLocations.map(loc => ({
+        id: loc.id,  // Use the ID from default locations
+        name: loc.name,
+        resource_type: loc.type,
+        description: `Default ${loc.type.toLowerCase()} location`,
+        status: 'AVAILABLE',
+        location: {
+          type: 'Point',
+          coordinates: loc.coordinates as [number, number]
+        },
+        coverage_area: undefined
+      }));
+      console.log('Using default resources (error fallback):', defaultResources);
       setResources(defaultResources);
     } finally {
       setLoading(false);
@@ -212,6 +210,18 @@ export function DashboardResourceMap() {
           'line-color': '#4b5563',
           'line-width': 1
         };
+    }
+  };
+
+  const handleMarkerClick = (resource: Resource) => {
+    console.log('Marker clicked:', resource);
+    if (typeof resource.id === 'number' && !isNaN(resource.id)) {
+      console.log('Setting selected resource:', resource);
+      setSelectedResource(resource);  // Update the selected resource for the popup
+      console.log('Calling onLocationSelect with ID:', resource.id);
+      onLocationSelect(resource.id);  // Call the callback for stock levels
+    } else {
+      console.log('Invalid resource ID:', resource.id);
     }
   };
 
@@ -284,11 +294,14 @@ export function DashboardResourceMap() {
                   longitude={resource.location.coordinates[0]}
                   latitude={resource.location.coordinates[1]}
                   onClick={(e) => {
+                    console.log('Marker onClick triggered');
                     e.originalEvent.stopPropagation();
-                    setSelectedResource(resource);
+                    handleMarkerClick(resource);
                   }}
                 >
-                  <MapPin className={`h-6 w-6 ${getMarkerColor(resource.resource_type)}`} />
+                  <div className="cursor-pointer">
+                    <MapPin className={`h-6 w-6 ${getMarkerColor(resource.resource_type)}`} />
+                  </div>
                 </Marker>
               )}
             </div>
@@ -329,4 +342,4 @@ export function DashboardResourceMap() {
       </Map>
     </div>
   );
-} 
+}

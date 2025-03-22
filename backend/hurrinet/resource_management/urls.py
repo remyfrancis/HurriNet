@@ -11,6 +11,27 @@ router.register(r"distributions", views.DistributionViewSet)
 
 urlpatterns = [
     path("", include(router.urls)),
+    # Stock level endpoints
+    path(
+        "resources/<int:pk>/stock-levels/",
+        views.ResourceViewSet.as_view({"get": "stock_levels"}),
+        name="resource-stock-levels",
+    ),
+    path(
+        "resources/all-stock-levels/",
+        views.ResourceViewSet.as_view({"get": "all_stock_levels"}),
+        name="all-stock-levels",
+    ),
+    path(
+        "inventory/aggregated-stock-levels/",
+        views.InventoryItemViewSet.as_view({"get": "aggregated_stock_levels"}),
+        name="aggregated-stock-levels",
+    ),
+    path(
+        "inventory/stock-status/",
+        views.InventoryItemViewSet.as_view({"get": "stock_status"}),
+        name="stock-status",
+    ),
     # Explicitly register the with_status action
     path(
         "inventory/with_status/",

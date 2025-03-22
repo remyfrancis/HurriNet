@@ -96,11 +96,90 @@ class Resource(models.Model):
             self.status = "AVAILABLE"
         self.save()
 
+    def get_stock_levels(self):
+        """
+        Calculate stock levels for all item types at this resource location.
+        Returns a dictionary of item types and their status details.
+        """
+        stock_levels = {}
+
+        # Initialize all item types with zero values
+        for item_type, _ in InventoryItem.ITEM_TYPES:
+            stock_levels[item_type] = {
+                "quantity": 0,
+                "capacity": 0,
+                "status": "Low",
+                "percentage": 0,
+            }
+
+        # Aggregate inventory items by type
+        for item in self.inventory_items.all():
+            stock_data = stock_levels[item.item_type]
+            stock_data["quantity"] += item.quantity
+            stock_data["capacity"] += item.capacity
+
+            # Calculate percentage and status
+            if stock_data["capacity"] > 0:
+                percentage = (stock_data["quantity"] / stock_data["capacity"]) * 100
+                stock_data["percentage"] = round(percentage, 2)
+                stock_data["status"] = self._calculate_status(percentage)
+
+        return stock_levels
+
+    @staticmethod
+    def _calculate_status(percentage):
+        """Calculate status based on percentage of capacity"""
+        if percentage <= 25:
+            return "Low"
+        elif percentage <= 75:
+            return "Moderate"
+        else:
+            return "Sufficient"
+
+    @classmethod
+    def get_all_stock_levels(cls):
+        """
+        Get stock levels for all resource locations.
+        Returns a list of locations with their stock levels.
+        """
+        locations_stock = []
+
+        for resource in cls.objects.all():
+            location_data = {
+                "id": resource.id,
+                "name": resource.name,
+                "location": {
+                    "type": "Point",
+                    "coordinates": [resource.location.x, resource.location.y],
+                },
+                "address": resource.address,
+                "stock_levels": resource.get_stock_levels(),
+            }
+            locations_stock.append(location_data)
+
+        return locations_stock
+
 
 class InventoryItem(models.Model):
     """Model for tracking specific inventory items within resources"""
 
+    ITEM_TYPES = [
+        ("NONE", "None"),
+        ("MEDICAL", "Medical"),
+        ("WATER", "Water"),
+        ("FOOD", "Food"),
+        ("SHELTER", "Shelter/Warmth"),
+        ("TOOLS", "Tools/Equipment"),
+        ("POWER", "Power/Light"),
+        ("COMMUNICATION", "Communication"),
+        ("SANITATION", "Sanitation/Hygiene"),
+        ("CLOTHING", "Clothing"),
+        ("TRANSPORTATION", "Transportation"),
+        ("SPECIAL_NEEDS", "Special Needs"),
+    ]
+
     name = models.CharField(max_length=255)
+    item_type = models.CharField(max_length=20, choices=ITEM_TYPES, default="NONE")
     quantity = models.IntegerField()
     unit = models.CharField(max_length=50)
     capacity = models.IntegerField()
@@ -123,6 +202,86 @@ class InventoryItem(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.quantity} {self.unit})"
+
+    def calculate_status(self):
+        """Calculate the status of this inventory item based on quantity vs capacity"""
+        if self.capacity <= 0:
+            return "Low"
+
+        percentage = (self.quantity / self.capacity) * 100
+        if percentage <= 25:
+            return "Low"
+        elif percentage <= 75:
+            return "Moderate"
+        else:
+            return "Sufficient"
+
+    def get_stock_details(self):
+        """Get detailed stock information for this item"""
+        percentage = 0
+        if self.capacity > 0:
+            percentage = (self.quantity / self.capacity) * 100
+
+        return {
+            "id": self.id,
+            "name": self.name,
+            "item_type": self.item_type,
+            "item_type_display": self.get_item_type_display(),
+            "quantity": self.quantity,
+            "capacity": self.capacity,
+            "unit": self.unit,
+            "status": self.calculate_status(),
+            "percentage": round(percentage, 2),
+        }
+
+    @classmethod
+    def get_aggregated_stock_levels(cls):
+        """
+        Get aggregated stock levels across all locations by item type.
+        Returns overall status for each item type.
+        """
+        stock_levels = {}
+
+        # Initialize all item types
+        for item_type, display_name in cls.ITEM_TYPES:
+            stock_levels[item_type] = {
+                "type_display": display_name,
+                "total_quantity": 0,
+                "total_capacity": 0,
+                "locations": [],
+            }
+
+        # Aggregate data
+        for item in cls.objects.select_related("resource").all():
+            if item.item_type not in stock_levels:
+                continue
+
+            stock_data = stock_levels[item.item_type]
+            stock_data["total_quantity"] += item.quantity
+            stock_data["total_capacity"] += item.capacity
+
+            if item.resource:
+                stock_data["locations"].append(
+                    {
+                        "resource_id": item.resource.id,
+                        "resource_name": item.resource.name,
+                        "quantity": item.quantity,
+                        "capacity": item.capacity,
+                        "status": item.calculate_status(),
+                    }
+                )
+
+        # Calculate overall status for each type
+        for item_type, data in stock_levels.items():
+            if data["total_capacity"] > 0:
+                percentage = (data["total_quantity"] / data["total_capacity"]) * 100
+                data["percentage"] = round(percentage, 2)
+                data["status"] = Resource._calculate_status(percentage)
+            else:
+                data["percentage"] = 0
+                data["status"] = "Low"
+
+        return stock_levels
 
 
 class ResourceRequest(models.Model):

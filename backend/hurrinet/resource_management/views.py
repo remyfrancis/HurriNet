@@ -13,6 +13,9 @@ from .serializers import (
     ResourceRequestSerializer,
     DistributionSerializer,
     SupplierSerializer,
+    StockLevelSerializer,
+    LocationStockLevelSerializer,
+    AggregatedStockLevelSerializer,
 )
 
 
@@ -108,6 +111,20 @@ class ResourceViewSet(viewsets.ModelViewSet):
         serializer = ResourceRequestSerializer(requests, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=["get"])
+    def stock_levels(self, request, pk=None):
+        """Get stock levels for a specific resource location"""
+        resource = self.get_object()
+        stock_levels = resource.get_stock_levels()
+        serializer = LocationStockLevelSerializer(resource)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["get"])
+    def all_stock_levels(self, request):
+        """Get stock levels for all resource locations"""
+        locations_stock = Resource.get_all_stock_levels()
+        return Response(locations_stock)
+
 
 class InventoryItemViewSet(viewsets.ModelViewSet):
     """ViewSet for managing inventory items"""
@@ -147,6 +164,35 @@ class InventoryItemViewSet(viewsets.ModelViewSet):
             )
 
         return Response(data)
+
+    @action(detail=False, methods=["get"])
+    def aggregated_stock_levels(self, request):
+        """Get aggregated stock levels across all locations"""
+        stock_levels = InventoryItem.get_aggregated_stock_levels()
+        serializer = AggregatedStockLevelSerializer(stock_levels, many=True)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["get"])
+    def stock_status(self, request):
+        """Get current stock status for all item types"""
+        resource_id = request.query_params.get("resource_id")
+
+        if resource_id:
+            # Get stock levels for specific resource
+            try:
+                resource = Resource.objects.get(id=resource_id)
+                stock_levels = resource.get_stock_levels()
+                return Response(
+                    {"resource_name": resource.name, "stock_levels": stock_levels}
+                )
+            except Resource.DoesNotExist:
+                return Response(
+                    {"error": "Resource not found"}, status=status.HTTP_404_NOT_FOUND
+                )
+        else:
+            # Get aggregated stock levels
+            stock_levels = InventoryItem.get_aggregated_stock_levels()
+            return Response(stock_levels)
 
 
 class ResourceRequestViewSet(viewsets.ModelViewSet):

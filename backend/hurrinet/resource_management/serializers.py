@@ -56,12 +56,17 @@ class InventoryItemSerializer(serializers.ModelSerializer):
     resource = ResourceMinimalSerializer()
     supplier = SupplierMinimalSerializer()
     resource_name = serializers.CharField(source="resource.name", read_only=True)
+    item_type_display = serializers.CharField(
+        source="get_item_type_display", read_only=True
+    )
 
     class Meta:
         model = InventoryItem
         fields = [
             "id",
             "name",
+            "item_type",
+            "item_type_display",
             "quantity",
             "capacity",
             "unit",
@@ -155,3 +160,47 @@ class SupplierSerializer(GeoFeatureModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+
+class StockLevelSerializer(serializers.Serializer):
+    """Serializer for stock level data"""
+
+    quantity = serializers.IntegerField()
+    capacity = serializers.IntegerField()
+    status = serializers.CharField()
+    percentage = serializers.FloatField()
+
+
+class LocationStockLevelSerializer(GeoFeatureModelSerializer):
+    """Serializer for location-based stock levels"""
+
+    stock_levels = serializers.DictField(
+        child=StockLevelSerializer(),
+        help_text="Dictionary of item types and their stock levels",
+    )
+
+    class Meta:
+        model = Resource
+        geo_field = "location"
+        fields = ["id", "name", "address", "stock_levels"]
+
+
+class AggregatedStockLocationSerializer(serializers.Serializer):
+    """Serializer for individual location data in aggregated stock levels"""
+
+    resource_id = serializers.IntegerField()
+    resource_name = serializers.CharField()
+    quantity = serializers.IntegerField()
+    capacity = serializers.IntegerField()
+    status = serializers.CharField()
+
+
+class AggregatedStockLevelSerializer(serializers.Serializer):
+    """Serializer for aggregated stock levels by item type"""
+
+    type_display = serializers.CharField()
+    total_quantity = serializers.IntegerField()
+    total_capacity = serializers.IntegerField()
+    percentage = serializers.FloatField()
+    status = serializers.CharField()
+    locations = AggregatedStockLocationSerializer(many=True)

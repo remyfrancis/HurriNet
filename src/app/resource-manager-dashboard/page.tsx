@@ -15,9 +15,26 @@ import { DashboardResourceMap } from '@/components/DashboardResourceMap'
 //   description: 'Resource management and distribution dashboard',
 // }
 
+interface StockLevel {
+  quantity: number;
+  capacity: number;
+  status: 'Low' | 'Moderate' | 'Sufficient';
+  percentage: number;
+}
+
+interface LocationStockLevels {
+  resource_name: string;
+  stock_levels: {
+    [key: string]: StockLevel;
+  };
+}
+
 export default function ResourceManagerDashboard() {
   const router = useRouter()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [selectedLocation, setSelectedLocation] = useState<number | null>(null)
+  const [stockLevels, setStockLevels] = useState<LocationStockLevels | null>(null)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken')
@@ -28,6 +45,53 @@ export default function ResourceManagerDashboard() {
     setIsAuthenticated(true)
   }, [router])
 
+  const fetchStockLevels = async (resourceId: number) => {
+    console.log('Fetching stock levels for resource:', resourceId);
+    if (!resourceId) {
+      console.log('No resource ID provided');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      console.log('Making API request to:', `/api/inventory/stock-status/?resource_id=${resourceId}`);
+      const response = await fetch(`/api/inventory/stock-status/?resource_id=${resourceId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) throw new Error('Failed to fetch stock levels');
+      const data = await response.json();
+      console.log('Received stock levels:', data);
+      setStockLevels(data);
+    } catch (error) {
+      console.error('Error fetching stock levels:', error);
+      setStockLevels(null); // Reset stock levels on error
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLocationSelect = (resourceId: number) => {
+    console.log('Location selected:', resourceId);
+    setSelectedLocation(resourceId);
+    fetchStockLevels(resourceId);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'low':
+        return 'text-red-600'
+      case 'moderate':
+        return 'text-yellow-600'
+      case 'sufficient':
+        return 'text-green-600'
+      default:
+        return 'text-gray-600'
+    }
+  }
+
   if (!isAuthenticated) {
     return null
   }
@@ -37,22 +101,41 @@ export default function ResourceManagerDashboard() {
     icon: MapPin,
     content: (
       <div className="h-[300px]">
-        <DashboardResourceMap />
+        <DashboardResourceMap 
+          onLocationSelect={(id) => {
+            console.log('Map location selected:', id);
+            handleLocationSelect(id);
+          }} 
+        />
       </div>
     )
   }
 
   const sidePanels = [
     { 
-      title: "Stock Assessment", 
+      title: stockLevels ? `Stock Assessment - ${stockLevels.resource_name}` : "Stock Assessment", 
       icon: ClipboardList,
       content: (
         <div>
-          <ul className="list-disc list-inside space-y-1 text-sm">
-            <li className="text-green-600">Water: Sufficient</li>
-            <li className="text-yellow-600">Food: Moderate</li>
-            <li className="text-red-600">Medical: Low</li>
-          </ul>
+          {loading ? (
+            <p className="text-sm text-gray-500">Loading stock levels...</p>
+          ) : stockLevels ? (
+            <ul className="list-disc list-inside space-y-1 text-sm">
+              {Object.entries(stockLevels.stock_levels).map(([itemType, data]) => (
+                <li key={itemType} className={getStatusColor(data.status)}>
+                  {itemType.replace('_', ' ').toLowerCase()
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ')}: {data.status}
+                  <div className="ml-4 text-xs text-gray-500">
+                    {data.quantity}/{data.capacity} ({data.percentage.toFixed(1)}%)
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-gray-500">Select a location to view stock levels</p>
+          )}
         </div>
       )
     },
