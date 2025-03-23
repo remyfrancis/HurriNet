@@ -4,8 +4,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { AlertTriangle, CloudLightning, Compass, LifeBuoy, MapPin, Shield, Users, Waves } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import LoginForm from "./auth/login/login-form"
-import RegisterForm from "./auth/register/register-form"
+import LoginForm from "./login/login-form"
+import RegisterForm from "./register/register-form"
 import { useRouter } from "next/navigation"
 
 export default function LandingPage() {
@@ -30,12 +30,12 @@ export default function LandingPage() {
             </Link>
           </nav>
           <div className="flex items-center gap-4">
-            <Link href="/auth/login">
+            <Link href="/login">
               <Button variant="outline" size="sm">
                 Log in
               </Button>
             </Link>
-            <Link href="/auth/register">
+            <Link href="/register">
               <Button size="sm">Register</Button>
             </Link>
           </div>
@@ -47,7 +47,13 @@ export default function LandingPage() {
           <div className="flex flex-col justify-center px-4 sm:px-6 lg:px-8 py-12 bg-muted">
             <div className="mx-auto w-full max-w-md space-y-8">
               <div className="flex items-center gap-2">
-                <Shield className="h-8 w-8 text-primary" />
+                <Image 
+                  src="/hurrinet_logo.png" 
+                  alt="HurriNet Logo" 
+                  width={32} 
+                  height={32} 
+                  className="h-8 w-8"
+                />
                 <span className="text-2xl font-bold">HurriNet</span>
               </div>
               <div>
@@ -109,7 +115,13 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="mt-8 flex items-center text-sm">
-                <Shield className="h-4 w-4 text-primary mr-2" />
+                <Image 
+                  src="/hurrinet_logo.png" 
+                  alt="HurriNet Logo" 
+                  width={16} 
+                  height={16} 
+                  className="h-4 w-4 mr-2"
+                />
                 <span>Trusted by NEMO and local emergency response teams</span>
               </div>
             </div>
@@ -278,8 +290,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-
-
         <section id="contact" className="w-full py-12 md:py-24 lg:py-32 bg-muted">
           <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid gap-10 md:grid-cols-2 md:gap-16">
@@ -369,7 +379,13 @@ export default function LandingPage() {
       <footer className="w-full border-t bg-background py-6 md:py-8">
         <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-between gap-4 md:flex-row md:gap-8">
           <div className="flex items-center gap-2">
-            <Shield className="h-6 w-6 text-primary" />
+            <Image 
+              src="/hurrinet_logo.png" 
+              alt="HurriNet Logo" 
+              width={24} 
+              height={24} 
+              className="h-6 w-6"
+            />
             <span className="text-lg font-bold">HurriNet</span>
           </div>
           <p className="text-center text-sm text-muted-foreground md:text-left">

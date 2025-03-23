@@ -23,7 +23,7 @@ export default function AlertsPanel() {
       try {
         const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/alerts`)
         const data = await response.json()
-        setAlerts(data)
+        setAlerts(Array.isArray(data) ? data : [])
         setLoading(false)
       } catch (error) {
         setError('Failed to load alerts')

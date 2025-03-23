@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Inter } from 'next/font/google';
 import "./globals.css";
 import { Stethoscope, Siren, Users2, Boxes, UsersIcon, SettingsIcon, BellIcon, HeartHandshake, ActivityIcon } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar/index"
@@ -7,6 +8,12 @@ import { AlertProvider } from "@/contexts/AlertContext"
 import { SupplierUpdatesProvider } from "@/contexts/SupplierUpdatesContext";
 import { AuthProvider } from '@/contexts/AuthContext';
 import { Toaster } from "@/components/ui/toaster";
+
+// Initialize Inter font
+const inter = Inter({ 
+  subsets: ['latin'],
+  variable: '--font-inter',
+});
 
 // Load custom fonts using next/font
 const geistSans = localFont({
@@ -146,8 +153,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} font-sans`}>
-      <body>
+    <html lang="en" className={`${inter.variable} ${geistSans.variable} ${geistMono.variable} font-sans`}>
+      <body className={inter.className}>
         <AuthProvider>
           <AlertProvider>
             <SupplierUpdatesProvider>

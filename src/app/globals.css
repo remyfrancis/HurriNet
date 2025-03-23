@@ -5,64 +5,69 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 212 89% 16%; /* #012753 */
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 212 89% 16%;
  
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 212 89% 16%;
  
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 191 88% 48%; /* #04D2F0 */
+    --primary-foreground: 0 0% 100%;
  
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 212 89% 16%; /* #012753 */
+    --secondary-foreground: 0 0% 100%;
  
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
  
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 35 93% 56%; /* #F7A827 */
+    --accent-foreground: 212 89% 16%;
  
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --ring: 191 88% 48%; /* #04D2F0 */
  
     --radius: 0.5rem;
+
+    /* Custom brand colors for direct usage */
+    --brand-amber: 35 93% 56%; /* #F7A827 */
+    --brand-cyan: 191 88% 48%; /* #04D2F0 */
+    --brand-navy: 212 89% 16%; /* #012753 */
   }
  
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 212 89% 16%; /* #012753 */
+    --foreground: 0 0% 100%;
  
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 212 89% 10%;
+    --card-foreground: 0 0% 100%;
  
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 212 89% 10%;
+    --popover-foreground: 0 0% 100%;
  
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 191 88% 48%; /* #04D2F0 */
+    --primary-foreground: 0 0% 100%;
  
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 35 93% 56%; /* #F7A827 */
+    --secondary-foreground: 212 89% 16%;
  
-    --muted: 217.2 32.6% 17.5%;
+    --muted: 212 89% 10%;
     --muted-foreground: 215 20.2% 65.1%;
  
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 35 93% 56%; /* #F7A827 */
+    --accent-foreground: 212 89% 16%;
  
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
  
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 212 89% 26%;
+    --input: 212 89% 26%;
+    --ring: 191 88% 48%; /* #04D2F0 */
   }
 }
  
@@ -71,7 +76,8 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    font-family: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   }
 }
 
@@ -91,7 +97,7 @@
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .mermaid {
-    background: #1a1a1a;
+    background: hsl(var(--background));
   }
 }
 
@@ -110,7 +116,7 @@
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .mermaid-wrapper {
-    background: #1a1a1a;
+    background: hsl(var(--background));
   }
 }
 
@@ -120,11 +126,11 @@
 }
 
 .shelter-marker.open {
-  color: #22c55e;
+  color: hsl(var(--primary));
 }
 
 .shelter-marker.closed {
-  color: #ef4444;
+  color: hsl(var(--destructive));
 }
 
 .alert-marker {
@@ -133,13 +139,13 @@
 }
 
 .alert-marker.high {
-  color: #ef4444;
+  color: hsl(var(--destructive));
 }
 
 .alert-marker.medium {
-  color: #f59e0b;
+  color: hsl(var(--accent));
 }
 
 .alert-marker.low {
-  color: #3b82f6;
+  color: hsl(var(--primary));
 }

@@ -68,7 +68,7 @@ export default function LoginForm() {
           router.push('/admin-dashboard')
           break
         case 'EMERGENCY_PERSONNEL':
-          router.push('/emergency-personnel-dashboard')
+          router.push('/emergency-hq')
           break
         case 'RESOURCE_MANAGER':
           router.push('/resource-manager-dashboard')

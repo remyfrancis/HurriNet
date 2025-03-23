@@ -15,6 +15,7 @@ import {
   Radio,
   Shield,
   Users,
+  Activity,
 } from 'lucide-react'
 
 const navItems = [
@@ -68,6 +69,11 @@ const navItems = [
     href: '/admin-dashboard/settings',
     icon: Cog,
   },
+  {
+    title: 'System Performance',
+    href: '/admin-dashboard/system-performance',
+    icon: Activity,
+  }
 ]
 
 interface AdminNavProps extends React.HTMLAttributes<HTMLDivElement> {}

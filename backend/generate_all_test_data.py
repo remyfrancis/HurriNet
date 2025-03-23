@@ -34,22 +34,15 @@ AVAILABLE_APPS = [app.split(".")[-1] for app in settings.INSTALLED_APPS]
 print(f"Available apps: {AVAILABLE_APPS}")
 
 
-def run_script(script_name):
-    """Run a Python script and return its output."""
-    print(f"\n{'='*50}")
-    print(f"Running {script_name}...")
-    print(f"{'='*50}\n")
-
-    result = subprocess.run(
-        [sys.executable, script_name], capture_output=True, text=True
-    )
-
-    print(result.stdout)
-
-    if result.stderr:
-        print(f"Errors:\n{result.stderr}")
-
-    return result.returncode == 0
+def run_generator(script_name):
+    """Run a generator script and handle any errors"""
+    print(f"\nRunning {script_name}...")
+    try:
+        subprocess.run([sys.executable, script_name], check=True)
+        print(f"Successfully completed {script_name}")
+    except subprocess.CalledProcessError as e:
+        print(f"Error running {script_name}: {e}")
+        sys.exit(1)
 
 
 def generate_all_test_data():
@@ -74,6 +67,8 @@ def generate_all_test_data():
         scripts = [
             "generate_test_users.py",
             "generate_test_alerts.py",
+            "generate_test_feeds.py",
+            "generate_test_medical.py",
         ]
 
         # Add the feed script if the feed app is available
@@ -91,7 +86,7 @@ def generate_all_test_data():
         success_count = 0
 
         for script in scripts:
-            if run_script(script):
+            if run_generator(script):
                 success_count += 1
             else:
                 print(f"Failed to run {script}")
