@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     "social",
     "core",
     "feed",
+    "medical.apps.MedicalConfig",
 ]
 
 # Add JWT settings

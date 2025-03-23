@@ -34,8 +34,10 @@ INSTALLED_APPS = [
     "corsheaders",
     "channels",
     "incidents.apps.IncidentsConfig",
+    "resource_management.apps.ResourceManagementConfig",
+    "medical.apps.MedicalConfig",
     "teams.apps.TeamsConfig",
-    "utils.apps.UtilsConfig",  # Update utils app path
+    "utils.apps.UtilsConfig",
 ]
 
 # Database configuration for PostGIS
