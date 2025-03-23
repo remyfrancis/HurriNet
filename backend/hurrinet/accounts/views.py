@@ -30,6 +30,7 @@ class AuthViewSet(viewsets.ViewSet):
     This ViewSet provides endpoints for:
     1. User registration
     2. User login
+    3. Emergency personnel registration
 
     All endpoints are publicly accessible (AllowAny permission)
     but implement proper validation and security measures.
@@ -132,6 +133,73 @@ class AuthViewSet(viewsets.ViewSet):
             )
         return Response(
             {"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    @action(detail=False, methods=["post"])
+    def register_emergency(self, request):
+        """
+        Register a new emergency personnel user in the system.
+
+        This endpoint:
+        1. Validates the emergency personnel registration data
+        2. Creates a new user account with emergency personnel role
+        3. Sets verification status to pending
+        4. Returns registration status
+
+        Request Body:
+            - email: User's work email address
+            - password: User's password
+            - first_name: User's first name
+            - last_name: User's last name
+            - first_responder_id: Badge number
+            - medical_license_id: Certification number
+            - phone_number: Emergency contact number
+            - address: Physical address
+            - department: Department name
+            - position: Current position
+            - emergency_role: Emergency response role
+            - additional_info: Additional verification information
+            - role: Set to 'EMERGENCY_PERSONNEL'
+
+        Returns:
+            201: Successfully registered emergency personnel (pending verification)
+            400: Invalid registration data
+        """
+        # Log the incoming request data (excluding sensitive information)
+        safe_log_data = request.data.copy()
+        if "password" in safe_log_data:
+            safe_log_data["password"] = "***"
+        logger.info(f"Emergency personnel registration request: {safe_log_data}")
+
+        # Ensure the role is set to EMERGENCY_PERSONNEL
+        data = request.data.copy()
+        data["role"] = "EMERGENCY_PERSONNEL"
+        data["is_verified"] = False  # Emergency personnel need verification
+
+        serializer = RegisterSerializer(data=data)
+        if serializer.is_valid():
+            try:
+                user = serializer.save()
+                # Don't generate tokens yet since verification is pending
+                return Response(
+                    {
+                        "message": "Registration successful. Your account is pending verification.",
+                        "user_id": user.id,
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+            except Exception as e:
+                logger.error(f"Emergency personnel registration error: {str(e)}")
+                return Response(
+                    {"error": str(e), "message": "Registration failed"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        # Log validation errors
+        logger.error(f"Emergency personnel validation errors: {serializer.errors}")
+        return Response(
+            {"error": serializer.errors, "message": "Invalid data provided"},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
 

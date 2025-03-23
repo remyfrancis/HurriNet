@@ -4,13 +4,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 
 export default function RegisterForm() {
@@ -96,25 +89,27 @@ export default function RegisterForm() {
             required
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="firstName">First Name</Label>
-          <Input
-            id="firstName"
-            name="firstName"
-            type="text"
-            placeholder="Enter your first name"
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="lastName">Last Name</Label>
-          <Input
-            id="lastName"
-            name="lastName"
-            type="text"
-            placeholder="Enter your last name"
-            required
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="firstName">First Name</Label>
+            <Input
+              id="firstName"
+              name="firstName"
+              type="text"
+              placeholder="First name"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="lastName">Last Name</Label>
+            <Input
+              id="lastName"
+              name="lastName"
+              type="text"
+              placeholder="Last name"
+              required
+            />
+          </div>
         </div>
         {error && (
           <div className="text-red-500 text-sm">
@@ -127,7 +122,7 @@ export default function RegisterForm() {
       </form>
       <div className="mt-4 text-center text-sm">
         <p>Already have an account?{" "}
-          <a href="/auth/login" className="text-primary hover:underline">
+          <a href="/login" className="text-primary hover:underline">
             Log in
           </a>
         </p>

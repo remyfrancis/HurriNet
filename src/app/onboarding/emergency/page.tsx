@@ -1,3 +1,5 @@
+
+// src/app/onboarding/emergency/page.tsx
 'use client'
 
 import { useState } from 'react'
@@ -19,30 +21,63 @@ export default function EmergencyPersonnelOnboarding() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    firstName: '',
+    lastName: '',
+    badgeNumber: '',
+    department: '',
+    position: '',
+    emergencyRole: '',
+    certificationNumber: '',
+    phoneNumber: '',
+    address: '',
+    additionalInfo: ''
+  })
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleSelectChange = (value: string, name: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setIsLoading(true)
     setError(null)
 
-    const formData = new FormData(event.currentTarget)
     const data = {
-      email: formData.get('email'),
-      password: formData.get('password'),
-      first_name: formData.get('firstName'),
-      last_name: formData.get('lastName'),
-      badge_number: formData.get('badgeNumber'),
-      department: formData.get('department'),
-      position: formData.get('position'),
-      emergency_role: formData.get('emergencyRole'),
-      certification_number: formData.get('certificationNumber'),
-      phone_number: formData.get('phoneNumber'),
-      additional_info: formData.get('additionalInfo'),
-      user_type: 'emergency_responder'
+      email: formData.email,
+      password: formData.password,
+      first_name: formData.firstName,
+      last_name: formData.lastName,
+      first_responder_id: formData.badgeNumber,
+      medical_license_id: formData.certificationNumber,
+      phone_number: formData.phoneNumber,
+      address: formData.address,
+      department: formData.department,
+      position: formData.position,
+      emergency_role: formData.emergencyRole,
+      additional_info: formData.additionalInfo,
+      role: 'EMERGENCY_PERSONNEL'
     }
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/accounts/auth/register/emergency/`, {
+      const apiUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/accounts/register/`
+      console.log('Attempting to register at:', apiUrl)
+      console.log('Registration data:', data)
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -51,11 +86,18 @@ export default function EmergencyPersonnelOnboarding() {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || JSON.stringify(errorData.error))
+        const contentType = response.headers.get('content-type')
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json()
+          throw new Error(errorData.message || JSON.stringify(errorData.error))
+        } else {
+          const textError = await response.text()
+          console.error('Non-JSON error response:', textError)
+          throw new Error(`Server error: ${response.status} ${response.statusText}`)
+        }
       }
 
-      router.push('/auth/login?verification=pending')
+      router.push('/login?verification=pending')
     } catch (error) {
       console.error('Registration error:', error)
       setError(error instanceof Error ? error.message : 'Registration failed')
@@ -69,7 +111,7 @@ export default function EmergencyPersonnelOnboarding() {
       <div className="space-y-6 text-center mb-10">
         <Shield className="h-12 w-12 text-primary mx-auto" />
         <h1 className="text-3xl font-bold tracking-tight">Emergency Personnel Verification</h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground max-w-2xl mx-auto">
           Please provide your credentials and official information for verification. 
           This helps us ensure secure access to emergency response tools.
         </p>
@@ -77,12 +119,15 @@ export default function EmergencyPersonnelOnboarding() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Basic Information</h2>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">First Name</Label>
               <Input
                 id="firstName"
                 name="firstName"
+                value={formData.firstName}
+                onChange={handleInputChange}
                 required
               />
             </div>
@@ -91,6 +136,8 @@ export default function EmergencyPersonnelOnboarding() {
               <Input
                 id="lastName"
                 name="lastName"
+                value={formData.lastName}
+                onChange={handleInputChange}
                 required
               />
             </div>
@@ -102,6 +149,8 @@ export default function EmergencyPersonnelOnboarding() {
               id="email"
               name="email"
               type="email"
+              value={formData.email}
+              onChange={handleInputChange}
               required
             />
           </div>
@@ -112,16 +161,23 @@ export default function EmergencyPersonnelOnboarding() {
               id="password"
               name="password"
               type="password"
+              value={formData.password}
+              onChange={handleInputChange}
               required
             />
           </div>
+        </div>
 
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Professional Details</h2>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="badgeNumber">Badge Number</Label>
               <Input
                 id="badgeNumber"
                 name="badgeNumber"
+                value={formData.badgeNumber}
+                onChange={handleInputChange}
                 required
               />
             </div>
@@ -130,6 +186,8 @@ export default function EmergencyPersonnelOnboarding() {
               <Input
                 id="certificationNumber"
                 name="certificationNumber"
+                value={formData.certificationNumber}
+                onChange={handleInputChange}
                 required
               />
             </div>
@@ -140,6 +198,8 @@ export default function EmergencyPersonnelOnboarding() {
             <Input
               id="department"
               name="department"
+              value={formData.department}
+              onChange={handleInputChange}
               required
             />
           </div>
@@ -149,13 +209,15 @@ export default function EmergencyPersonnelOnboarding() {
             <Input
               id="position"
               name="position"
+              value={formData.position}
+              onChange={handleInputChange}
               required
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="emergencyRole">Emergency Response Role</Label>
-            <Select name="emergencyRole" required>
+            <Select name="emergencyRole" value={formData.emergencyRole} onValueChange={(value) => handleSelectChange(value, 'emergencyRole')} required>
               <SelectTrigger>
                 <SelectValue placeholder="Select your role" />
               </SelectTrigger>
@@ -167,22 +229,45 @@ export default function EmergencyPersonnelOnboarding() {
               </SelectContent>
             </Select>
           </div>
+        </div>
 
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Contact Information</h2>
           <div className="space-y-2">
             <Label htmlFor="phoneNumber">Emergency Contact Number</Label>
             <Input
               id="phoneNumber"
               name="phoneNumber"
               type="tel"
+              value={formData.phoneNumber}
+              onChange={handleInputChange}
               required
             />
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="address">Address</Label>
+            <Textarea
+              id="address"
+              name="address"
+              value={formData.address}
+              onChange={handleInputChange}
+              placeholder="Enter your address"
+              className="h-24"
+              required
+            />
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Additional Information</h2>
+          <div className="space-y-2">
             <Label htmlFor="additionalInfo">Additional Information</Label>
             <Textarea
               id="additionalInfo"
               name="additionalInfo"
+              value={formData.additionalInfo}
+              onChange={handleInputChange}
               placeholder="Any additional information that may help verify your role"
               className="h-24"
             />
@@ -198,12 +283,15 @@ export default function EmergencyPersonnelOnboarding() {
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? 'Submitting...' : 'Submit for Verification'}
         </Button>
-
-        <p className="text-sm text-muted-foreground text-center mt-4">
-          Your information will be verified by NEMO administrators. 
-          You will receive an email once your account is approved.
-        </p>
       </form>
+
+      <div className="mt-6 text-center text-sm text-muted-foreground">
+        <p>Are you a citizen looking to register for alerts?{" "}
+          <a href="/register" className="text-primary hover:underline">
+            Register here
+          </a>
+        </p>
+      </div>
     </div>
   )
 } 

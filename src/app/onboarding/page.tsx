@@ -88,7 +88,7 @@ export default function OnboardingPage() {
 
       <div className="mt-6 text-center text-sm text-muted-foreground">
         <p>Are you a citizen looking to register for alerts?{" "}
-          <a href="/auth/register" className="text-primary hover:underline">
+          <a href="/register" className="text-primary hover:underline">
             Register here
           </a>
         </p>

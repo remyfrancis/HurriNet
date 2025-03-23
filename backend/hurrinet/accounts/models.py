@@ -345,13 +345,25 @@ class User(AbstractUser):
     address = models.TextField(blank=True)
 
     # Professional identification
-    first_responder_id = models.CharField(max_length=50, blank=True, null=True)
+    first_responder_id = models.CharField(
+        max_length=50, blank=True, null=True
+    )  # Maps to badgeNumber
     medical_license_id = models.CharField(max_length=50, blank=True, null=True)
+
+    # Emergency Personnel specific fields
+    department = models.CharField(max_length=100, blank=True, null=True)
+    position = models.CharField(max_length=100, blank=True, null=True)
+    emergency_role = models.CharField(max_length=50, blank=True, null=True)
+    additional_info = models.TextField(blank=True, null=True)
 
     # Account status and permissions
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
+    is_verified = models.BooleanField(
+        default=False,
+        help_text="Indicates if the user's credentials have been verified",
+    )
     date_joined = models.DateTimeField(default=timezone.now)
 
     # Use custom manager for user operations

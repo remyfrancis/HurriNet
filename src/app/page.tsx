@@ -4,30 +4,48 @@ import Link from "next/link"
 import Image from "next/image"
 import { AlertTriangle, CloudLightning, Compass, LifeBuoy, MapPin, Shield, Users, Waves } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import LoginForm from "./login/login-form"
 import RegisterForm from "./register/register-form"
 import { useRouter } from "next/navigation"
 
 export default function LandingPage() {
   const router = useRouter()
 
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
+
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col scroll-smooth">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <nav className="hidden md:flex gap-6">
-            <Link href="#features" className="text-sm font-medium hover:text-primary">
+            <button 
+              onClick={() => scrollToSection('features')} 
+              className="text-sm font-medium hover:text-primary transition-colors"
+            >
               Features
-            </Link>
-            <Link href="#about" className="text-sm font-medium hover:text-primary">
+            </button>
+            <button 
+              onClick={() => scrollToSection('about')} 
+              className="text-sm font-medium hover:text-primary transition-colors"
+            >
               About
-            </Link>
-            <Link href="#alerts" className="text-sm font-medium hover:text-primary">
+            </button>
+            <button 
+              onClick={() => scrollToSection('alerts')} 
+              className="text-sm font-medium hover:text-primary transition-colors"
+            >
               Alerts
-            </Link>
-            <Link href="#contact" className="text-sm font-medium hover:text-primary">
+            </button>
+            <button 
+              onClick={() => scrollToSection('contact')} 
+              className="text-sm font-medium hover:text-primary transition-colors"
+            >
               Contact
-            </Link>
+            </button>
           </nav>
           <div className="flex items-center gap-4">
             <Link href="/login">
@@ -81,7 +99,7 @@ export default function LandingPage() {
               </div>
               <div className="text-center text-sm text-muted-foreground">
                 Already have an account?{" "}
-                <Link href="#login" className="text-primary underline underline-offset-4">
+                <Link href="/login" className="text-primary underline underline-offset-4">
                   Log in
                 </Link>
               </div>

@@ -32,7 +32,12 @@ class UserSerializer(serializers.ModelSerializer):
     - address: User's address
     - first_responder_id: First responder identification
     - medical_license_id: Medical license number
+    - department: User's department
+    - position: User's position
+    - emergency_role: Emergency response role
+    - additional_info: Additional information
     - is_active: User's active status
+    - is_verified: User's verification status
     """
 
     class Meta:
@@ -47,9 +52,17 @@ class UserSerializer(serializers.ModelSerializer):
             "address",
             "first_responder_id",
             "medical_license_id",
+            "department",
+            "position",
+            "emergency_role",
+            "additional_info",
             "is_active",
+            "is_verified",
         )
-        read_only_fields = ("is_active",)
+        read_only_fields = (
+            "is_active",
+            "is_verified",
+        )
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -67,13 +80,23 @@ class RegisterSerializer(serializers.ModelSerializer):
     - first_name: Required user's first name
     - last_name: Required user's last name
     - role: Required user role
-    - phone_number: Optional contact number
+    - phone_number: Required contact number for emergency personnel
     - address: Required address
-    - first_responder_id: Optional first responder ID
-    - medical_license_id: Optional medical license number
+    - first_responder_id: Required badge number for emergency personnel
+    - medical_license_id: Required certification number for emergency personnel
+    - department: Required department for emergency personnel
+    - position: Required position for emergency personnel
+    - emergency_role: Required emergency role for emergency personnel
+    - additional_info: Optional additional information
+    - is_verified: Read-only field for verification status
     """
 
     password = serializers.CharField(write_only=True)
+    department = serializers.CharField(required=False)
+    position = serializers.CharField(required=False)
+    emergency_role = serializers.CharField(required=False)
+    additional_info = serializers.CharField(required=False, allow_blank=True)
+    is_verified = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = User
@@ -87,6 +110,11 @@ class RegisterSerializer(serializers.ModelSerializer):
             "address",
             "first_responder_id",
             "medical_license_id",
+            "department",
+            "position",
+            "emergency_role",
+            "additional_info",
+            "is_verified",
         )
         extra_kwargs = {
             "password": {"write_only": True},
@@ -96,6 +124,52 @@ class RegisterSerializer(serializers.ModelSerializer):
             "role": {"required": True},
             "address": {"required": True},
         }
+
+    def validate(self, data):
+        """
+        Validate the registration data based on user role.
+
+        For emergency personnel:
+        - Validates required fields specific to emergency personnel
+        - Ensures proper formatting of IDs and contact information
+
+        Args:
+            data: Dictionary of registration data
+
+        Returns:
+            dict: Validated data
+
+        Raises:
+            ValidationError: If validation fails
+        """
+        if data.get("role") == "EMERGENCY_PERSONNEL":
+            required_fields = [
+                "phone_number",
+                "first_responder_id",
+                "medical_license_id",
+                "department",
+                "position",
+                "emergency_role",
+            ]
+
+            for field in required_fields:
+                if not data.get(field):
+                    raise serializers.ValidationError(
+                        {
+                            field: f"{field.replace('_', ' ').title()} is required for emergency personnel"
+                        }
+                    )
+
+            # Validate emergency_role is one of the allowed values
+            valid_roles = ["first_responder", "coordinator", "team_lead", "specialist"]
+            if data.get("emergency_role") not in valid_roles:
+                raise serializers.ValidationError(
+                    {
+                        "emergency_role": f"Emergency role must be one of: {', '.join(valid_roles)}"
+                    }
+                )
+
+        return data
 
     def create(self, validated_data):
         """
@@ -116,7 +190,25 @@ class RegisterSerializer(serializers.ModelSerializer):
             ValidationError: If user creation fails
         """
         try:
+            # Extract non-model fields before user creation
+            department = validated_data.pop("department", None)
+            position = validated_data.pop("position", None)
+            emergency_role = validated_data.pop("emergency_role", None)
+            additional_info = validated_data.pop("additional_info", None)
+
             user = User.objects.create_user(**validated_data)
+
+            # Save additional fields if they exist
+            if department:
+                user.department = department
+            if position:
+                user.position = position
+            if emergency_role:
+                user.emergency_role = emergency_role
+            if additional_info:
+                user.additional_info = additional_info
+
+            user.save()
             return user
         except Exception as e:
             raise serializers.ValidationError(f"Failed to create user: {str(e)}")

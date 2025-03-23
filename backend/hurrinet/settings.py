@@ -31,8 +31,10 @@ INSTALLED_APPS = [
     "django.contrib.gis",  # Add GeoDjango
     "rest_framework",
     "rest_framework_gis",  # Add DRF GIS support
+    "rest_framework_simplejwt",  # Add JWT support
     "corsheaders",
     "channels",
+    "accounts.apps.AccountsConfig",  # Add accounts app
     "incidents.apps.IncidentsConfig",
     "resource_management.apps.ResourceManagementConfig",
     "medical.apps.MedicalConfig",
@@ -109,3 +111,29 @@ CORS_ALLOW_CREDENTIALS = True
 
 # WebSocket settings
 WEBSOCKET_URL = "/ws/incidents/"
+
+# REST Framework settings
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+}
+
+# JWT settings
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ROTATE_REFRESH_TOKENS": False,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "UPDATE_LAST_LOGIN": False,
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": "your-secret-key",  # Replace with a secure secret key in production
+    "VERIFYING_KEY": None,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
+
+# Custom user model
+AUTH_USER_MODEL = "accounts.User"

@@ -2,6 +2,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import Permission
+from django.utils.translation import gettext_lazy as _
 from .models import User, CustomGroup, PermissionCategory
 
 
@@ -65,6 +66,7 @@ class CustomGroupAdmin(admin.ModelAdmin):
     list_filter = ("group_type",)
     search_fields = ("name",)
     filter_horizontal = ("permissions",)
+    ordering = ("name",)
 
     def get_form(self, request, obj=None, **kwargs):
         """
@@ -112,9 +114,10 @@ class CustomUserAdmin(UserAdmin):
         "last_name",
         "role",
         "is_active",
+        "is_verified",
         "is_staff",
     )
-    list_filter = ("role", "is_active", "is_staff", "is_superuser")
+    list_filter = ("role", "is_active", "is_verified", "is_staff", "is_superuser")
     search_fields = ("email", "first_name", "last_name")
     ordering = ("email",)
 
@@ -135,8 +138,13 @@ class CustomUserAdmin(UserAdmin):
             "Professional Info",
             {
                 "fields": (
+                    "role",
                     "first_responder_id",
                     "medical_license_id",
+                    "department",
+                    "position",
+                    "emergency_role",
+                    "additional_info",
                 )
             },
         ),
@@ -144,8 +152,8 @@ class CustomUserAdmin(UserAdmin):
             "Permissions",
             {
                 "fields": (
-                    "role",
                     "is_active",
+                    "is_verified",
                     "is_staff",
                     "is_superuser",
                     "groups",
@@ -168,8 +176,9 @@ class CustomUserAdmin(UserAdmin):
                     "first_name",
                     "last_name",
                     "role",
-                    "phone_number",
-                    "address",
+                    "is_active",
+                    "is_verified",
+                    "is_staff",
                 ),
             },
         ),
