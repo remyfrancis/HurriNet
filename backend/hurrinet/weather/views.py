@@ -22,7 +22,7 @@ from .serializers import (
 logger = logging.getLogger(__name__)
 
 
-class WeatherViewSet(viewsets.ReadOnlyModelViewSet):
+class WeatherViewSet(viewsets.ModelViewSet):
     """
     ViewSet for accessing weather information.
 
@@ -40,7 +40,7 @@ class WeatherViewSet(viewsets.ReadOnlyModelViewSet):
             return WeatherData.objects.all()
         elif self.action == "forecast":
             return WeatherForecast.objects.filter(date__gte=timezone.now().date())
-        elif self.action == "alerts":
+        elif self.action in ["alerts", "create", "update", "partial_update", "destroy"]:
             return WeatherAlert.objects.filter(
                 is_active=True, end_time__gt=timezone.now()
             )
@@ -52,7 +52,7 @@ class WeatherViewSet(viewsets.ReadOnlyModelViewSet):
             return WeatherDataSerializer
         elif self.action == "forecast":
             return WeatherForecastSerializer
-        elif self.action == "alerts":
+        elif self.action in ["alerts", "create", "update", "partial_update", "destroy"]:
             return WeatherAlertSerializer
         return WeatherDataSerializer
 
@@ -103,9 +103,16 @@ class WeatherViewSet(viewsets.ReadOnlyModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-    @action(detail=False, methods=["get"])
+    @action(detail=False, methods=["get", "post"])
     def alerts(self, request):
-        """Get active weather alerts."""
+        """Get or create weather alerts."""
+        if request.method == "POST":
+            serializer = WeatherAlertSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         alerts = self.get_queryset()
         serializer = self.get_serializer(alerts, many=True)
         return Response(serializer.data)
