@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     "core",
     "feed",
     "medical.apps.MedicalConfig",
+    "teams.apps.TeamsConfig",
 ]
 
 # Add JWT settings

@@ -48,6 +48,7 @@ urlpatterns = (
         path("api/shelters/", include("shelters.urls")),
         path("api/social/", include("social.urls")),
         path("api/medical/", include("medical.urls")),
+        path("api/teams/", include("teams.urls")),
     ]
     + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
