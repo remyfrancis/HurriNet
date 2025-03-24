@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,8 +15,17 @@ export default function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { login } = useAuth()
   const { toast } = useToast()
+
+  useEffect(() => {
+    // Check if user was redirected from registration with pending verification
+    const verification = searchParams.get('verification')
+    if (verification === 'pending') {
+      router.push('/verification-pending')
+    }
+  }, [searchParams, router])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -53,6 +62,12 @@ export default function LoginForm() {
       }
 
       const userData = await userResponse.json()
+
+      // Check if user is verified if they are emergency personnel
+      if (userData.role === 'EMERGENCY_PERSONNEL' && !userData.is_verified) {
+        router.push('/verification-pending')
+        return
+      }
       
       // Use AuthContext login
       login(tokenData.access, userData)

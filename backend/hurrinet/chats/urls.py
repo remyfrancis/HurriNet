@@ -7,10 +7,14 @@ including session management and message handling.
 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import ChatSessionViewSet, ChatMessageViewSet
+from .views import ChatSessionViewSet, ChatMessageViewSet, UserViewSet
 
 # Create a router and register our viewsets with it
 router = DefaultRouter()
+
+# User endpoints:
+# - GET /api/users/ (list available users)
+router.register("users", UserViewSet, basename="user")
 
 # Chat session endpoints:
 # - GET /api/chats/sessions/ (list sessions)

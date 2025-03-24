@@ -30,11 +30,6 @@ const navItems = [
     icon: Bell,
   },
   {
-    title: 'Warnings',
-    href: '/admin-dashboard/warnings',
-    icon: AlertTriangle,
-  },
-  {
     title: 'Map',
     href: '/admin-dashboard/map',
     icon: Map,

@@ -12,12 +12,53 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from django.db.models import Q
 from django.utils import timezone
+from django.contrib.auth import get_user_model
 from .models import ChatSession, ChatMessage
 from .serializers import (
     ChatSessionSerializer,
     ChatSessionCreateSerializer,
     ChatMessageSerializer,
+    UserSerializer,
 )
+from .permissions import CanMessageUser
+
+User = get_user_model()
+
+
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for listing users available for chat.
+
+    Filters users based on the requester's role:
+    - Administrators can see all users
+    - Citizens can see other citizens
+    - Resource Managers, Emergency Personnel, and Medical Personnel can see each other
+    """
+
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+
+        # Administrators can see all users
+        if user.is_staff or user.is_superuser:
+            return User.objects.exclude(id=user.id)
+
+        # Citizens can only see other citizens
+        if user.role == "CITIZEN":
+            return User.objects.filter(role="CITIZEN").exclude(id=user.id)
+
+        # Professional roles can see each other
+        professional_roles = [
+            "RESOURCE_MANAGER",
+            "EMERGENCY_PERSONNEL",
+            "MEDICAL_PERSONNEL",
+        ]
+        if user.role in professional_roles:
+            return User.objects.filter(role__in=professional_roles).exclude(id=user.id)
+
+        return User.objects.none()
 
 
 class ChatSessionViewSet(viewsets.ModelViewSet):
@@ -32,7 +73,7 @@ class ChatSessionViewSet(viewsets.ModelViewSet):
     - Marking messages as read
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CanMessageUser]
     serializer_class = ChatSessionSerializer
 
     def get_queryset(self):

@@ -3,11 +3,11 @@
 import { useState } from 'react'
 import { MapPin, AlertTriangle, CloudRain, MessageSquare, Flag, Building } from 'lucide-react'
 import { Card } from "@/components/ui/card"
-import WeatherWidget from '@/components/dashboard/WeatherWidget'
-import IncidentFeed from '@/components/dashboard/IncidentFeed'
-import AlertsPanel from '@/components/dashboard/AlertsPanel'
-import EmergencyMap from '@/components/dashboard/EmergencyMap'
-import CreateIncidentForm from '@/components/dashboard/CreateIncidentForm'
+import WeatherWidget from '@/components/Dashboard/WeatherWidget'
+import IncidentFeed from '@/components/Dashboard/IncidentFeed'
+import AlertsPanel from '@/components/Dashboard/AlertsPanel'
+import EmergencyMap from '@/components/Dashboard/EmergencyMap'
+import CreateIncidentForm from '@/components/Dashboard/CreateIncidentForm'
 
 export default function CitizenDashboard() {
   const [selectedIncident, setSelectedIncident] = useState(null)

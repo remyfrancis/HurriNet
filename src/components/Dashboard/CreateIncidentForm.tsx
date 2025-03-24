@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select } from "@/components/ui/select"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { AlertTriangle } from 'lucide-react'
 
 interface CreateIncidentFormProps {
@@ -96,15 +96,15 @@ export default function CreateIncidentForm({ onIncidentCreated }: CreateIncident
 
       <div className="space-y-2">
         <Label htmlFor="severity">Severity</Label>
-        <Select
-          id="severity"
-          value={formData.severity}
-          onValueChange={(value) => setFormData(prev => ({ ...prev, severity: value }))}
-          disabled={loading}
-        >
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
+        <Select value={formData.severity} onValueChange={(value) => setFormData(prev => ({ ...prev, severity: value }))}>
+          <SelectTrigger disabled={loading}>
+            <SelectValue placeholder="Select severity" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="low">Low</SelectItem>
+            <SelectItem value="medium">Medium</SelectItem>
+            <SelectItem value="high">High</SelectItem>
+          </SelectContent>
         </Select>
       </div>
 

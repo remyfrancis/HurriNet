@@ -21,6 +21,7 @@ urlpatterns = [
             [
                 path("incidents/", include("incidents.urls")),
                 path("accounts/", include("accounts.urls")),
+                path("chats/", include("chats.urls")),
             ]
         ),
     ),
