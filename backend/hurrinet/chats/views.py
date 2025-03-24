@@ -91,6 +91,23 @@ class ChatSessionViewSet(viewsets.ModelViewSet):
             return ChatSessionCreateSerializer
         return ChatSessionSerializer
 
+    def create(self, request, *args, **kwargs):
+        """Override create to return full session data after creation."""
+        # Use ChatSessionCreateSerializer for input validation
+        create_serializer = ChatSessionCreateSerializer(
+            data=request.data, context={"request": request}
+        )
+        create_serializer.is_valid(raise_exception=True)
+
+        # Create the chat session
+        instance = create_serializer.save(initiator=request.user)
+
+        # Return the full session data using ChatSessionSerializer
+        response_serializer = ChatSessionSerializer(
+            instance, context={"request": request}
+        )
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
     @action(detail=True, methods=["post"])
     def close(self, request, pk=None):
         """Close a chat session."""

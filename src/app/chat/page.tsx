@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface User {
   id: number;
@@ -23,6 +24,7 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
     // Fetch available users when component mounts
@@ -103,34 +105,54 @@ export default function ChatPage() {
     setFilteredUsers(filtered);
   }, [searchQuery, users]);
 
-  const startChat = async (recipientId: number) => {
-    if (!token) return;
-
+  const startChat = async (userId: string) => {
     try {
-      const authToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
-      const response = await fetch("/api/chats", {
-        method: "POST",
-        headers: {
-          Authorization: authToken,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ recipient: recipientId }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
+      if (!token) {
         toast({
           title: "Error",
-          description: errorData.error || "Failed to start chat",
+          description: "Please log in to start a chat",
           variant: "destructive",
         });
         return;
       }
 
-      toast({
-        title: "Success",
-        description: "Chat session created",
+      const authToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      console.log("Creating chat session with user:", userId);
+      
+      const response = await fetch("/api/chats/sessions", {
+        method: "POST",
+        headers: {
+          "Authorization": authToken,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ recipient: parseInt(userId, 10) }),
       });
+
+      if (!response.ok) {
+        const error = await response.text();
+        console.error("Failed to start chat:", error);
+        toast({
+          title: "Error",
+          description: "Failed to start chat",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const chatSession = await response.json();
+      console.log("Created chat session:", chatSession);
+      
+      if (!chatSession || !chatSession.id) {
+        console.error("Invalid chat session response:", chatSession);
+        toast({
+          title: "Error",
+          description: "Invalid chat session response",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      router.push(`/chat/${chatSession.id}`);
     } catch (error) {
       console.error("Error starting chat:", error);
       toast({
@@ -173,7 +195,7 @@ export default function ChatPage() {
                 key={u.id}
                 variant="ghost"
                 className="w-full justify-start p-4"
-                onClick={() => startChat(u.id)}
+                onClick={() => startChat(u.id.toString())}
               >
                 <div className="flex flex-col items-start">
                   <span className="font-medium">

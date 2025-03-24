@@ -67,24 +67,8 @@ class CanMessageUser(permissions.BasePermission):
         if user.is_staff or user.is_superuser:
             return True
 
-        # Check if user is a participant
-        if not obj.can_participate(user):
-            return False
-
-        # For existing chats, verify role-based rules
-        other_user = obj.recipient if obj.initiator == user else obj.initiator
-
-        # Citizens can only chat with other citizens
-        if user.role == "CITIZEN":
-            return other_user.role == "CITIZEN"
-
-        # Professional roles can chat with each other
-        professional_roles = [
-            "RESOURCE_MANAGER",
-            "EMERGENCY_PERSONNEL",
-            "MEDICAL_PERSONNEL",
-        ]
-        if user.role in professional_roles:
-            return other_user.role in professional_roles
+        # If the user is a participant in the chat, allow access
+        if obj.can_participate(user):
+            return True
 
         return False

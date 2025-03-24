@@ -269,7 +269,7 @@ LOGGING = {
 }
 
 # Add ASGI application
-ASGI_APPLICATION = "hurrinet.asgi.application"
+ASGI_APPLICATION = "hurrinet.routing.application"
 
 # Channel layers configuration
 CHANNEL_LAYERS = {
