@@ -12,6 +12,7 @@ import {
   Building,
   Activity,
   LogOut,
+  MessageCircle,
 } from 'lucide-react'
 
 const navItems = [
@@ -34,6 +35,11 @@ const navItems = [
     title: 'Team Positions',
     href: '/emergency-hq/team-positions',
     icon: Users,
+  },
+  {
+    title: 'Chat',
+    href: '/chat',
+    icon: MessageCircle,
   }
 ]
 

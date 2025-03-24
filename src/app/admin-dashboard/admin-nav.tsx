@@ -16,6 +16,7 @@ import {
   Shield,
   Users,
   Activity,
+  MessageCircle,
 } from 'lucide-react'
 
 const navItems = [
@@ -58,6 +59,11 @@ const navItems = [
     title: 'Support',
     href: '/admin-dashboard/support',
     icon: LifeBuoy,
+  },
+  {
+    title: 'Chat',
+    href: '/chat',
+    icon: MessageCircle,
   },
   {
     title: 'Settings',

@@ -17,6 +17,7 @@ import {
   LogOut,
   User,
   Settings,
+  MessageCircle,
 } from 'lucide-react'
 
 const navItems = [
@@ -49,6 +50,11 @@ const navItems = [
     title: 'Reports',
     href: '/resource-manager-dashboard/reports',
     icon: ClipboardList,
+  },
+  {
+    title: 'Chat',
+    href: '/chat',
+    icon: MessageCircle,
   },
   {
     title: 'Settings',

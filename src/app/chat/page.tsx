@@ -6,8 +6,14 @@ import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Search, Users2, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Card } from "@/components/ui/card";
+import { EmergencyHQNav } from "@/components/HQDashboard/EmergencyHQNav";
+import { CitizenNav } from "@/app/citizen-dashboard/citizen-nav";
+import { ResourceManagerNav } from "@/app/resource-manager-dashboard/resource-manager-nav";
+import { AdminNav } from "@/app/admin-dashboard/admin-nav";
 
 interface User {
   id: number;
@@ -25,6 +31,28 @@ export default function ChatPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
   const router = useRouter();
+
+  const getNavComponent = () => {
+    if (!user) return null;
+    
+    console.log("Current user role:", user.role); // Debug log
+    const role = user.role?.toLowerCase().trim();
+    console.log("Processed role:", role); // Debug log
+
+    switch (role) {
+      case 'emergency personnel':
+        return <EmergencyHQNav />;
+      case 'citizen':
+        return <CitizenNav />;
+      case 'resource manager':
+        return <ResourceManagerNav />;
+      case 'administrator':
+        return <AdminNav />;
+      default:
+        console.log("No matching navigation found for role:", role); // Debug log
+        return null;
+    }
+  };
 
   useEffect(() => {
     // Fetch available users when component mounts
@@ -171,45 +199,91 @@ export default function ChatPage() {
     );
   }
 
+  const navComponent = getNavComponent();
+  console.log("Nav component rendered:", !!navComponent); // Debug log
+
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] bg-background p-4">
-      <div className="flex items-center space-x-2 mb-4">
-        <Search className="w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Search users..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-1"
-        />
+    <div className="flex h-[calc(100vh-4rem)]">
+      {/* Left Sidebar - Navigation (25%) */}
+      <div className="w-1/4 border-r">
+        {navComponent}
       </div>
 
-      {isLoading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-muted-foreground">Loading users...</p>
-        </div>
-      ) : (
-        <ScrollArea className="flex-1">
-          <div className="space-y-2">
-            {filteredUsers.map((u) => (
-              <Button
-                key={u.id}
-                variant="ghost"
-                className="w-full justify-start p-4"
-                onClick={() => startChat(u.id.toString())}
-              >
-                <div className="flex flex-col items-start">
-                  <span className="font-medium">
-                    {u.first_name} {u.last_name}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    {u.email} • {u.role}
-                  </span>
-                </div>
-              </Button>
-            ))}
+      {/* Main Content - User List (75%) */}
+      <div className="w-3/4 flex flex-col bg-background">
+        <div className="p-6 border-b">
+          <h1 className="text-2xl font-semibold">Messages</h1>
+          <p className="text-sm text-muted-foreground">Start a conversation with other users</p>
+          
+          <div className="mt-4">
+            <Card className="relative">
+              <div className="flex items-center px-3 py-2">
+                <Search className="w-4 h-4 text-muted-foreground mr-2" />
+                <Input
+                  placeholder="Search users..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+              </div>
+            </Card>
           </div>
-        </ScrollArea>
-      )}
+        </div>
+
+        <div className="flex-1 p-6">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="flex flex-col items-center space-y-4 text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin" />
+                <p>Loading users...</p>
+              </div>
+            </div>
+          ) : filteredUsers.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="flex flex-col items-center space-y-4 text-muted-foreground">
+                <Users2 className="h-12 w-12" />
+                <div className="text-center">
+                  <p className="font-medium">No users found</p>
+                  <p className="text-sm">Try adjusting your search terms</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <ScrollArea className="h-full">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredUsers.map((u) => (
+                  <Button
+                    key={u.id}
+                    variant="outline"
+                    className="h-auto p-4 hover:bg-accent"
+                    onClick={() => startChat(u.id.toString())}
+                  >
+                    <div className="flex items-start space-x-4 w-full">
+                      <Avatar>
+                        <AvatarFallback className="bg-primary/10 text-primary">
+                          {u.first_name[0]}
+                          {u.last_name[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">
+                          {u.first_name} {u.last_name}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          {u.role}
+                        </span>
+                        <span className="text-xs text-muted-foreground mt-1">
+                          {u.email}
+                        </span>
+                      </div>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </div>
+      </div>
     </div>
   );
 } 

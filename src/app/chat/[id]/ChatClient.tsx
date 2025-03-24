@@ -6,7 +6,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send } from "lucide-react";
+import { Send, ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface Message {
   id: number;
@@ -52,6 +53,7 @@ export default function ChatClient({ chatId }: ChatClientProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const messageIdsRef = useRef<Set<number>>(new Set());
+  const router = useRouter();
 
   // Mark messages as read
   const markMessagesAsRead = () => {
@@ -262,10 +264,22 @@ export default function ChatClient({ chatId }: ChatClientProps) {
     <div className="flex flex-col h-[calc(100vh-4rem)] bg-background">
       {/* Chat Header */}
       <div className="border-b p-4">
-        <h2 className="text-lg font-semibold">
-          {otherUser?.first_name} {otherUser?.last_name}
-        </h2>
-        <p className="text-sm text-muted-foreground">{otherUser?.email}</p>
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push('/chat')}
+            className="hover:bg-accent"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h2 className="text-lg font-semibold">
+              {otherUser?.first_name} {otherUser?.last_name}
+            </h2>
+            <p className="text-sm text-muted-foreground">{otherUser?.email}</p>
+          </div>
+        </div>
       </div>
 
       {/* Messages */}
