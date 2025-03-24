@@ -49,6 +49,46 @@ export default function ChatPage({ params }: { params: { id: string } }) {
   const wsRef = useRef<WebSocket | null>(null);
   const messageIdsRef = useRef<Set<number>>(new Set());
 
+  // Mark messages as read
+  const markMessagesAsRead = () => {
+    if (wsRef.current) {
+      wsRef.current.send(JSON.stringify({ mark_read: true }));
+    }
+  };
+
+  // Handle visibility change
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        markMessagesAsRead();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  // Handle window focus
+  useEffect(() => {
+    const handleFocus = () => {
+      markMessagesAsRead();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
+
+  // Handle scroll
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      markMessagesAsRead();
+    }
+  };
+
   // Fetch chat session and messages
   const fetchChatData = async () => {
     if (!token) return;
@@ -109,14 +149,31 @@ export default function ChatPage({ params }: { params: { id: string } }) {
 
     ws.onopen = () => {
       console.log("WebSocket connected");
+      // Mark messages as read when connection is established
+      markMessagesAsRead();
     };
 
     ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      if (!messageIdsRef.current.has(message.id)) {
-        messageIdsRef.current.add(message.id);
-        setMessages((prev) => [...prev, message]);
-        scrollToBottom();
+      const data = JSON.parse(event.data);
+      
+      if (data.action === "new_message") {
+        const message = data.message;
+        if (!messageIdsRef.current.has(message.id)) {
+          messageIdsRef.current.add(message.id);
+          setMessages((prev) => [...prev, message]);
+          scrollToBottom();
+          // Mark message as read if we're the recipient
+          if (message.sender.id !== user?.id) {
+            ws.send(JSON.stringify({ mark_read: true }));
+          }
+        }
+      } else if (data.action === "messages_read") {
+        // Update read status for all messages when the other user reads them
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.sender.id === user?.id ? { ...msg, read: true } : msg
+          )
+        );
       }
     };
 
@@ -207,7 +264,11 @@ export default function ChatPage({ params }: { params: { id: string } }) {
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+      <ScrollArea 
+        className="flex-1 p-4" 
+        ref={scrollRef}
+        onScroll={handleScroll}
+      >
         <div className="space-y-4">
           {messages.map((message) => (
             <div
@@ -224,9 +285,14 @@ export default function ChatPage({ params }: { params: { id: string } }) {
                 }`}
               >
                 <p>{message.content}</p>
-                <p className="text-xs mt-1 opacity-70">
-                  {new Date(message.created_at).toLocaleTimeString()}
-                </p>
+                <div className="flex items-center justify-between text-xs mt-1 opacity-70">
+                  <span>{new Date(message.created_at).toLocaleTimeString()}</span>
+                  {message.sender.id === user.id && (
+                    <span className="ml-2">
+                      {message.read ? "✓✓" : "✓"}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           ))}
