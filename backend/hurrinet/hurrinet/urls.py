@@ -35,7 +35,7 @@ from resource_management.views import (
     DistributionViewSet,
 )
 from shelters.views import ShelterViewSet
-
+from contacts.views import ContactViewSet
 
 # Health check view
 def health_check(request):
@@ -67,6 +67,9 @@ router.register(
     basename="facility-status-report",
 )
 
+# Contacts
+router.register(r"contacts", ContactViewSet, basename="contact")
+
 # Teams
 router.register(r"teams", TeamViewSet, basename="team")
 router.register(r"team-members", TeamMemberViewSet, basename="team-member")
@@ -86,7 +89,9 @@ router.register(
     r"resource-requests", ResourceRequestViewSet, basename="resource-request"
 )
 router.register(r"resource-management/suppliers", SupplierViewSet, basename="supplier")
-router.register(r"resource-management/distributions", DistributionViewSet, basename="distribution")
+router.register(
+    r"resource-management/distributions", DistributionViewSet, basename="distribution"
+)
 
 # Shelters
 router.register(r"shelters", ShelterViewSet, basename="shelter")
@@ -124,6 +129,7 @@ urlpatterns = (
                     path("social/", include("social.urls")),
                     path("medical/", include("medical.urls")),
                     path("teams/", include("teams.urls")),
+                    path("contacts/", include("contacts.urls")),
                 ]
             ),
         ),
