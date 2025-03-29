@@ -40,11 +40,11 @@ export default function ChatPage() {
     console.log("Processed role:", role); // Debug log
 
     switch (role) {
-      case 'emergency personnel':
+      case 'emergency_personnel':
         return <EmergencyHQNav />;
       case 'citizen':
         return <CitizenNav />;
-      case 'resource manager':
+      case 'resource_manager':
         return <ResourceManagerNav />;
       case 'administrator':
         return <AdminNav />;
@@ -205,7 +205,7 @@ export default function ChatPage() {
   return (
     <div className="flex h-[calc(100vh-4rem)]">
       {/* Left Sidebar - Navigation (25%) */}
-      <div className="w-1/4 border-r">
+      <div>
         {navComponent}
       </div>
 

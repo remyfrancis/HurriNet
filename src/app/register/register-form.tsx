@@ -130,7 +130,7 @@ export default function RegisterForm() {
       <div className="mt-4 text-center text-xs text-muted-foreground">
         <p>Are you an emergency responder or coordinator?{" "}
           <a href="/contact" className="text-primary hover:underline">
-            Contact NEMO
+            Contact the Administrator
           </a>
         </p>
       </div>

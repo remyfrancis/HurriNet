@@ -17,6 +17,7 @@ import {
   Users,
   Activity,
   MessageCircle,
+  LogOut,
 } from 'lucide-react'
 
 const navItems = [
@@ -66,43 +67,54 @@ const navItems = [
     icon: MessageCircle,
   },
   {
-    title: 'Settings',
-    href: '/admin-dashboard/settings',
-    icon: Cog,
-  },
-  {
     title: 'System Performance',
     href: '/admin-dashboard/system-performance',
     icon: Activity,
   }
 ]
 
-interface AdminNavProps extends React.HTMLAttributes<HTMLDivElement> {}
-
-export function AdminNav({ className, ...props }: AdminNavProps) {
+export function AdminNav() {
   const pathname = usePathname()
 
+  const handleLogout = () => {
+    localStorage.removeItem('accessToken')
+    window.location.href = '/login'
+  }
+
   return (
-    <div className={cn('py-4', className)} {...props}>
-      <div className="px-4 py-2">
-        <h2 className="mb-2 px-2 text-lg font-semibold tracking-tight">
-          Admin Panel
-        </h2>
-        <div className="space-y-1">
-          {navItems.map((item) => (
+    <div className="w-64 min-h-screen bg-background border-r">
+      <div className="p-6">
+        <h1 className="text-xl font-bold">HurriNet</h1>
+        <p className="text-sm text-muted-foreground">Admin Portal</p>
+      </div>
+      <nav className="space-y-1 p-4">
+        {navItems.map((item) => {
+          const Icon = item.icon
+          const isActive = pathname === item.href
+          return (
             <Button
               key={item.href}
-              variant={pathname === item.href ? 'secondary' : 'ghost'}
+              variant={isActive ? 'secondary' : 'ghost'}
               className="w-full justify-start"
               asChild
             >
               <Link href={item.href}>
-                <item.icon className="mr-2 h-4 w-4" />
+                <Icon className="mr-2 h-4 w-4" />
                 {item.title}
               </Link>
             </Button>
-          ))}
-        </div>
+          )
+        })}
+      </nav>
+      <div className="absolute bottom-0 w-64 p-4 border-t">
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-red-500 hover:text-red-600"
+          onClick={handleLogout}
+        >
+          <LogOut className="mr-2 h-4 w-4" />
+          Logout
+        </Button>
       </div>
     </div>
   )

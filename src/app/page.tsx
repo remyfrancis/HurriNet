@@ -21,32 +21,44 @@ export default function LandingPage() {
     <div className="flex min-h-screen flex-col scroll-smooth">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="hidden md:flex gap-6">
-            <button 
-              onClick={() => scrollToSection('features')} 
-              className="text-sm font-medium hover:text-primary transition-colors"
-            >
-              Features
-            </button>
-            <button 
-              onClick={() => scrollToSection('about')} 
-              className="text-sm font-medium hover:text-primary transition-colors"
-            >
-              About
-            </button>
-            <button 
-              onClick={() => scrollToSection('alerts')} 
-              className="text-sm font-medium hover:text-primary transition-colors"
-            >
-              Alerts
-            </button>
-            <button 
-              onClick={() => scrollToSection('contact')} 
-              className="text-sm font-medium hover:text-primary transition-colors"
-            >
-              Contact
-            </button>
-          </nav>
+          <div className="flex items-center gap-6">
+            <Link href="/" className="flex items-center gap-2">
+              <Image 
+                src="/hurrinet_logo.png" 
+                alt="HurriNet Logo" 
+                width={32} 
+                height={32} 
+                className="h-8 w-8"
+              />
+              <span className="text-xl font-bold">HurriNet</span>
+            </Link>
+            <nav className="hidden md:flex gap-6">
+              <button 
+                onClick={() => scrollToSection('features')} 
+                className="text-sm font-medium hover:text-primary transition-colors"
+              >
+                Features
+              </button>
+              <button 
+                onClick={() => scrollToSection('about')} 
+                className="text-sm font-medium hover:text-primary transition-colors"
+              >
+                About
+              </button>
+              <button 
+                onClick={() => scrollToSection('alerts')} 
+                className="text-sm font-medium hover:text-primary transition-colors"
+              >
+                Alerts
+              </button>
+              <button 
+                onClick={() => scrollToSection('contact')} 
+                className="text-sm font-medium hover:text-primary transition-colors"
+              >
+                Contact
+              </button>
+            </nav>
+          </div>
           <div className="flex items-center gap-4">
             <Link href="/login">
               <Button variant="outline" size="sm">
@@ -407,14 +419,20 @@ export default function LandingPage() {
             <span className="text-lg font-bold">HurriNet</span>
           </div>
           <p className="text-center text-sm text-muted-foreground md:text-left">
-            &copy; {new Date().getFullYear()} Saint Lucia Hurricane Preparedness Network. All rights reserved.
+            &copy; {new Date().getFullYear()} Final Year Project for the University of London Computer Science BSc.
           </p>
           <div className="flex gap-4">
-            <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
+            <Link href="https://github.com/remyfrancis/HurriNet" className="text-sm text-muted-foreground hover:text-foreground">
+              Project GitHub
+            </Link>
+            <Link href="/privacy-policy" className="text-sm text-muted-foreground hover:text-foreground">
               Privacy Policy
             </Link>
-            <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-              Terms of Service
+            <Link href="/user-documentation" className="text-sm text-muted-foreground hover:text-foreground">
+              User Documentation
+            </Link>
+            <Link href="/final-report.pdf" className="text-sm text-muted-foreground hover:text-foreground">
+              Final Report
             </Link>
           </div>
         </div>

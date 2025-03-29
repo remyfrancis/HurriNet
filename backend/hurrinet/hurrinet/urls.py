@@ -37,6 +37,7 @@ from resource_management.views import (
 from shelters.views import ShelterViewSet
 from contacts.views import ContactViewSet
 
+
 # Health check view
 def health_check(request):
     return HttpResponse("OK", status=200)

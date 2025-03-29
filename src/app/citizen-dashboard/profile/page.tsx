@@ -20,7 +20,6 @@ interface UserProfile {
   phone_number: string
   address: string
   emergency_contacts: string
-  avatar_url?: string
   role: string
 }
 
@@ -128,38 +127,57 @@ export default function ProfilePage() {
             Manage your personal information and emergency contacts.
           </p>
           
-          <div className="max-w-3xl mx-auto">
+          <div>
             {profile && (
               <form onSubmit={handleSubmit}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   {/* Profile Summary Card */}
                   <Card className="md:col-span-1">
                     <CardHeader>
                       <CardTitle>Profile Summary</CardTitle>
                     </CardHeader>
-                    <CardContent className="flex flex-col items-center space-y-4">
-                      <Avatar className="h-24 w-24">
-                        <AvatarImage src={profile.avatar_url} />
-                        <AvatarFallback className="text-2xl">
-                          {profile.first_name && profile.last_name 
-                            ? `${profile.first_name[0]}${profile.last_name[0]}`
-                            : profile.email.slice(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="text-center">
-                        <h3 className="font-semibold text-lg">
-                          {profile.first_name} {profile.last_name}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">{profile.email}</p>
-                        <div className="mt-2 inline-block bg-primary/10 text-primary text-xs px-2 py-1 rounded-full">
-                          {profile.role}
+                    <CardContent className="flex flex-col space-y-4">
+                      <div className="flex flex-col items-center">
+                        <Avatar className="h-24 w-24">
+                          <AvatarImage src="https://api.dicebear.com/7.x/initials/svg?seed=default" alt={`${profile.first_name} ${profile.last_name}`} />
+                          <AvatarFallback>{profile.first_name?.[0]}{profile.last_name?.[0]}</AvatarFallback>
+                        </Avatar>
+                        <div className="mt-4 text-center">
+                          <h3 className="font-semibold text-lg">
+                            {profile.first_name} {profile.last_name}
+                          </h3>
+                          <div className="mt-1 inline-block bg-primary/10 text-primary text-xs px-2 py-1 rounded-full">
+                            {profile.role}
+                          </div>
                         </div>
+                      </div>
+
+                      <div className="space-y-3 w-full pt-4 border-t">
+                        <div className="flex items-center text-sm">
+                          <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
+                          <span className="text-muted-foreground">Email:</span>
+                          <span className="ml-1 truncate">{profile.email}</span>
+                        </div>
+                        {profile.phone_number && (
+                          <div className="flex items-center text-sm">
+                            <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
+                            <span className="text-muted-foreground">Phone:</span>
+                            <span className="ml-1">{profile.phone_number}</span>
+                          </div>
+                        )}
+                        {profile.address && (
+                          <div className="flex items-start text-sm">
+                            <MapPin className="h-4 w-4 mr-2 mt-0.5 text-muted-foreground" />
+                            <span className="text-muted-foreground">Address:</span>
+                            <span className="ml-1">{profile.address}</span>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
 
                   {/* Profile Details Card */}
-                  <Card className="md:col-span-2">
+                  <Card className="md:col-span-3">
                     <CardHeader>
                       <CardTitle>Personal Information</CardTitle>
                     </CardHeader>

@@ -37,8 +37,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { AlertTriangle, Bell, Filter, MoreVertical, Plus, Trash } from 'lucide-react'
+import { AlertTriangle, Bell, Filter, Loader2, MoreVertical, Plus, Trash } from 'lucide-react'
 import { AdminNav } from '../admin-nav'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface Alert {
   id: string
@@ -53,6 +54,43 @@ interface Alert {
     email: string
     role: string
   }
+}
+
+function LoadingAlertRow() {
+  return (
+    <TableRow>
+      <TableCell><Skeleton className="h-4 w-4" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-[250px]" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-[100px]" /></TableCell>
+      <TableCell><Skeleton className="h-6 w-[80px] rounded-full" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
+      <TableCell><Skeleton className="h-6 w-[80px] rounded-full" /></TableCell>
+      <TableCell>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-[150px]" />
+          <Skeleton className="h-3 w-[100px]" />
+        </div>
+      </TableCell>
+      <TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
+      <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
+    </TableRow>
+  )
+}
+
+function LoadingStatsCard() {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">
+          <Skeleton className="h-4 w-[100px]" />
+        </CardTitle>
+        <Skeleton className="h-4 w-4" />
+      </CardHeader>
+      <CardContent>
+        <Skeleton className="h-7 w-[50px]" />
+      </CardContent>
+    </Card>
+  )
 }
 
 export default function AlertsPage() {
@@ -208,7 +246,71 @@ export default function AlertsPage() {
   })
 
   if (loading) {
-    return <div>Loading...</div>
+    return (
+      <div className="flex min-h-screen">
+        <AdminNav className="w-64 border-r bg-background hidden md:block" />
+        <main className="flex-1 space-y-4 p-4 md:p-8">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold tracking-tight">Alerts Management</h1>
+            <Button disabled>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Loading...
+            </Button>
+          </div>
+
+          <div className="space-y-4">
+            {/* Loading Stats */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <LoadingStatsCard />
+              <LoadingStatsCard />
+              <LoadingStatsCard />
+            </div>
+
+            {/* Loading Filters */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex flex-wrap gap-4 items-center">
+                  <div className="flex items-center space-x-2">
+                    <Filter className="h-4 w-4" />
+                    <span>Filter by:</span>
+                  </div>
+                  <Skeleton className="h-9 w-[180px]" />
+                  <Skeleton className="h-9 w-[180px]" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Loading Table */}
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <Skeleton className="h-4 w-4" />
+                      </TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Severity</TableHead>
+                      <TableHead>District</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created By</TableHead>
+                      <TableHead>Created At</TableHead>
+                      <TableHead className="w-12"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Array(5).fill(0).map((_, i) => (
+                      <LoadingAlertRow key={i} />
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+    )
   }
 
   return (
@@ -495,8 +597,18 @@ export default function AlertsPage() {
             <Button variant="outline" onClick={() => setEditingAlert(null)}>
               Cancel
             </Button>
-            <Button onClick={() => editingAlert && handleEdit(editingAlert)}>
-              Save Changes
+            <Button 
+              onClick={() => editingAlert && handleEdit(editingAlert)}
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -518,8 +630,16 @@ export default function AlertsPage() {
             <Button
               variant="destructive"
               onClick={() => alertToDelete && handleDelete(alertToDelete)}
+              disabled={loading}
             >
-              Delete
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -539,15 +659,31 @@ export default function AlertsPage() {
               className="w-full"
               variant="outline"
               onClick={() => handleBulkAction('deactivate')}
+              disabled={loading}
             >
-              Deactivate Selected Alerts
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deactivating...
+                </>
+              ) : (
+                'Deactivate Selected Alerts'
+              )}
             </Button>
             <Button
               className="w-full"
               variant="destructive"
               onClick={() => handleBulkAction('delete')}
+              disabled={loading}
             >
-              Delete Selected Alerts
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Selected Alerts'
+              )}
             </Button>
           </div>
         </DialogContent>

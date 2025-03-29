@@ -55,12 +55,7 @@ const navItems = [
     title: 'Chat',
     href: '/chat',
     icon: MessageCircle,
-  },
-  {
-    title: 'Settings',
-    href: '/resource-manager-dashboard/settings',
-    icon: Settings,
-  },
+  }
 ]
 
 export function ResourceManagerNav() {

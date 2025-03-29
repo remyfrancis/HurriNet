@@ -171,20 +171,11 @@ export default function ResourceManagerDashboard() {
       title: "Emergency Request", 
       icon: AlertTriangle,
       content: (
-        <div>
-          <p className="mb-2">Submit urgent request:</p>
+        <div className="flex flex-col h-full justify-between">
+          <div>
+            <p className="mb-2">Submit urgent request:</p>
+          </div>
           <Button className="w-full">New Emergency Request</Button>
-        </div>
-      )
-    },
-    { 
-      title: "Resource Validation", 
-      icon: ShieldCheck,
-      content: (
-        <div>
-          <p className="mb-2">Last validation:</p>
-          <p className="font-semibold">2023-06-15</p>
-          <Button className="w-full mt-2">Start New Validation</Button>
         </div>
       )
     },
@@ -206,27 +197,25 @@ export default function ResourceManagerDashboard() {
 
   const halfWidthPanels = [
     { 
-      title: "Supplier Contact", 
-      icon: PhoneCall,
+      title: "Inventory Update", 
+      icon: RefreshCw,
       content: (
-        <div>
-          <p className="mb-2">Key suppliers:</p>
-          <ul className="list-disc list-inside space-y-1">
-            <li>St. Lucia Medical Supplies Ltd.</li>
-            <li>Caribbean Food Distributors</li>
-            <li>Island Water Company</li>
-          </ul>
-          <Button className="w-full mt-2">Contact Supplier</Button>
+        <div className="flex flex-col h-full justify-between">
+          <div>
+            <p className="mb-2">Last update: 2023-06-20</p>
+          </div>
+          <Button className="w-full">Update Inventory</Button>
         </div>
       )
     },
     { 
-      title: "Inventory Update", 
-      icon: RefreshCw,
+      title: "Resource Validation", 
+      icon: ShieldCheck,
       content: (
         <div>
-          <p className="mb-2">Last update: 2023-06-20</p>
-          <Button className="w-full">Update Inventory</Button>
+          <p className="mb-2">Last validation:</p>
+          <p className="font-semibold">2023-06-15</p>
+          <Button className="w-full mt-2">Start New Validation</Button>
         </div>
       )
     },
@@ -237,7 +226,7 @@ export default function ResourceManagerDashboard() {
       <ResourceManagerNav />
       <main className="flex-1">
         <div className="container p-8">
-          <h1 className="text-2xl font-bold mb-6">Saint Lucia Emergency Management Dashboard</h1>
+          <h1 className="text-2xl font-bold mb-6">Resource Manager Dashboard</h1>
           
           <div className="space-y-6">
             {/* Top section with main panel and side panels */}
@@ -273,17 +262,17 @@ export default function ResourceManagerDashboard() {
             </div>
 
             {/* Main panels section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {mainPanels.map((panel, index) => (
                 <Card 
                   key={index}
-                  className="hover:shadow-lg transition-shadow duration-300"
+                  className="hover:shadow-lg transition-shadow duration-300 h-full"
                 >
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">{panel.title}</CardTitle>
                     <panel.icon className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="h-[calc(100%-4rem)] flex flex-col">
                     {panel.content}
                   </CardContent>
                 </Card>
@@ -295,13 +284,13 @@ export default function ResourceManagerDashboard() {
               {halfWidthPanels.map((panel, index) => (
                 <Card 
                   key={index}
-                  className="hover:shadow-lg transition-shadow duration-300"
+                  className="hover:shadow-lg transition-shadow duration-300 h-full"
                 >
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">{panel.title}</CardTitle>
                     <panel.icon className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="h-[calc(100%-4rem)] flex flex-col">
                     {panel.content}
                   </CardContent>
                 </Card>

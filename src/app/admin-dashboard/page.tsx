@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AdminNav } from "./admin-nav"
 import { WeatherForecast } from "./weather-forecast"
 import { WarningsList } from "./warnings-list"
+import Link from 'next/link'
 
 // Dynamically import the Map component to avoid SSR issues
 const Map = dynamic(() => import("./map"), {
@@ -75,10 +76,12 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
             <div className="flex items-center space-x-4">
-              <Button variant="destructive" className="hidden sm:flex">
-                <Phone className="mr-2 h-4 w-4" />
-                Emergency Contacts
-              </Button>
+              <Link href="/emergency-numbers">
+                <Button variant="destructive" className="hidden sm:flex">
+                  <Phone className="mr-2 h-4 w-4" />
+                  Emergency Contacts
+                </Button>
+              </Link>
               <Button>
                 <Radio className="mr-2 h-4 w-4" />
                 Broadcast Alert
