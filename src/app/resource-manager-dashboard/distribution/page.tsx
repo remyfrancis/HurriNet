@@ -691,7 +691,6 @@ export default function DistributionPage() {
         'Fulfilled Requests',
         'Completion Rate (%)',
         'Last Updated',
-        'Time',
         'Coordinates'
       ];
 

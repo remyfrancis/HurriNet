@@ -131,13 +131,16 @@ class DistributionSerializer(GeoFeatureModelSerializer):
 
     resource_name = serializers.CharField(source="resource.name", read_only=True)
     completion_rate = serializers.SerializerMethodField()
+    resource_id = serializers.PrimaryKeyRelatedField(
+        queryset=Resource.objects.all(), source="resource", write_only=True
+    )
 
     class Meta:
         model = Distribution
         geo_field = "location"
         fields = [
             "id",
-            "resource",
+            "resource_id",
             "resource_name",
             "total_requests",
             "fulfilled_requests",
@@ -149,9 +152,12 @@ class DistributionSerializer(GeoFeatureModelSerializer):
 
     def get_completion_rate(self, obj):
         """Calculate the completion rate of distribution"""
-        if obj.total_requests == 0:
+        if obj.total_requests <= 0:
             return 0
-        return round((obj.fulfilled_requests / obj.total_requests) * 100, 2)
+        try:
+            return round((obj.fulfilled_requests / obj.total_requests) * 100, 2)
+        except ZeroDivisionError:
+            return 0
 
 
 class SupplierSerializer(GeoFeatureModelSerializer):

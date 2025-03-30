@@ -42,6 +42,11 @@ const navItems = [
     icon: PhoneCall,
   },
   {
+    title: 'Distributions',
+    href: '/resource-manager-dashboard/distribution',
+    icon: Truck,
+  },
+  {
     title: 'Chat',
     href: '/chat',
     icon: MessageCircle,
