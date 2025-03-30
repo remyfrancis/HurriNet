@@ -6,7 +6,14 @@ from django.contrib.gis.geos import Point
 from django.contrib.gis.db.models.functions import Distance
 import numpy as np
 from scipy.optimize import linear_sum_assignment
-from .models import Resource, InventoryItem, ResourceRequest, Distribution, Supplier
+from .models import (
+    Resource,
+    InventoryItem,
+    ResourceRequest,
+    Distribution,
+    Supplier,
+    Transfer,
+)
 from .serializers import (
     ResourceSerializer,
     InventoryItemSerializer,
@@ -16,6 +23,7 @@ from .serializers import (
     StockLevelSerializer,
     LocationStockLevelSerializer,
     AggregatedStockLevelSerializer,
+    TransferSerializer,
 )
 
 
@@ -331,3 +339,60 @@ def allocate_procurement_resources(request):
 
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class TransferViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing inventory transfers"""
+
+    queryset = Transfer.objects.all().order_by("-created_at")
+    serializer_class = TransferSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        status = self.request.query_params.get("status", None)
+        if status:
+            queryset = queryset.filter(status=status)
+        return queryset
+
+    @action(detail=True, methods=["post"])
+    def complete(self, request, pk=None):
+        """Complete a pending transfer"""
+        transfer = self.get_object()
+
+        try:
+            transfer.complete_transfer()
+            return Response(
+                {"status": "success", "message": "Transfer completed successfully"}
+            )
+        except ValueError as e:
+            return Response(
+                {"status": "error", "message": str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as e:
+            return Response(
+                {"status": "error", "message": "Failed to complete transfer"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    @action(detail=True, methods=["post"])
+    def cancel(self, request, pk=None):
+        """Cancel a pending transfer"""
+        transfer = self.get_object()
+
+        if transfer.status != "pending":
+            return Response(
+                {
+                    "status": "error",
+                    "message": "Only pending transfers can be cancelled",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        transfer.status = "cancelled"
+        transfer.save()
+
+        return Response(
+            {"status": "success", "message": "Transfer cancelled successfully"}
+        )

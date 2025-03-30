@@ -1,5 +1,6 @@
 from django.contrib.gis.db import models
 from django.conf import settings
+from django.utils import timezone
 
 
 class Resource(models.Model):
@@ -391,3 +392,71 @@ class Supplier(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.get_supplier_type_display()})"
+
+
+class Transfer(models.Model):
+    """Model for tracking inventory transfers between resources"""
+
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("in_progress", "In Progress"),
+        ("completed", "Completed"),
+        ("cancelled", "Cancelled"),
+        ("failed", "Failed"),
+    ]
+
+    item = models.ForeignKey(
+        InventoryItem, on_delete=models.CASCADE, related_name="transfers"
+    )
+    source = models.ForeignKey(
+        Resource, on_delete=models.CASCADE, related_name="outgoing_transfers"
+    )
+    destination = models.ForeignKey(
+        Resource, on_delete=models.CASCADE, related_name="incoming_transfers"
+    )
+    quantity = models.IntegerField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Transfer of {self.quantity} {self.item.name} from {self.source.name} to {self.destination.name}"
+
+    def save(self, *args, **kwargs):
+        # Validate transfer quantity
+        if self.quantity > self.item.quantity:
+            raise ValueError("Transfer quantity exceeds available quantity")
+
+        super().save(*args, **kwargs)
+
+    def complete_transfer(self):
+        """Complete the transfer and update inventory quantities"""
+        if self.status != "pending":
+            raise ValueError("Transfer is not in pending state")
+
+        # Update source inventory
+        self.item.quantity -= self.quantity
+        self.item.save()
+
+        # Create or update destination inventory
+        dest_item, created = InventoryItem.objects.get_or_create(
+            name=self.item.name,
+            resource=self.destination,
+            defaults={
+                "item_type": self.item.item_type,
+                "unit": self.item.unit,
+                "capacity": self.item.capacity,
+                "supplier": self.item.supplier,
+                "quantity": self.quantity,
+            },
+        )
+
+        if not created:
+            dest_item.quantity += self.quantity
+            dest_item.save()
+
+        self.status = "completed"
+        self.completed_at = timezone.now()
+        self.save()

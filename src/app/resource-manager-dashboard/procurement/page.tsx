@@ -32,6 +32,8 @@ import { Label } from "@/components/ui/label"
 import { Plus, Search, Send } from 'lucide-react'
 import { toast } from "@/hooks/use-toast"
 
+const API_BASE_URL = 'http://localhost:8000'
+
 interface Order {
   id: number
   item: string
@@ -48,6 +50,13 @@ interface Supplier {
   phone: string
   supplier_type: string
   status: string
+  properties: {
+    name: string
+    email: string
+    phone: string
+    supplier_type: string
+    status: string
+  }
 }
 
 interface InventoryItem {
@@ -67,7 +76,7 @@ interface InventoryItem {
   }
 }
 
-interface Resource {
+interface ResourceFeature {
   id: number
   name: string
   resource_type: string
@@ -75,6 +84,33 @@ interface Resource {
   capacity: number
   status: string
 }
+
+// Update the getAuthHeaders function to try different token formats
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  const accessToken = localStorage.getItem('accessToken');
+  const csrfToken = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+
+  console.log('Available tokens:', { token, accessToken, csrfToken }); // Debug log
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  // Try different auth header formats
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`;
+  } else if (token) {
+    headers['Authorization'] = `Token ${token}`;
+  }
+
+  if (csrfToken) {
+    headers['X-CSRFToken'] = csrfToken;
+  }
+
+  console.log('Request headers:', headers); // Debug log
+  return headers;
+};
 
 export default function Procurement() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -88,20 +124,55 @@ export default function Procurement() {
   // Data states
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
-  const [resources, setResources] = useState<Resource[]>([])
+  const [resources, setResources] = useState<ResourceFeature[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   // Fetch data from the backend
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const headers = getAuthHeaders();
+        
+        // Log the full request details
+        console.log('Making requests with:', {
+          url: `${API_BASE_URL}/api/resource-management/inventory/with_status/`,
+          headers,
+        });
+
+        const fetchOptions = {
+          headers,
+          credentials: 'include' as const,
+        };
+
         const [suppliersRes, inventoryRes, resourcesRes] = await Promise.all([
-          fetch('/api/resource-management/suppliers/'),
-          fetch('/api/resource-management/inventory/with_status/'),
-          fetch('/api/resource-management/resources/')
-        ])
+          fetch(`${API_BASE_URL}/api/resource-management/suppliers/`, fetchOptions),
+          fetch(`${API_BASE_URL}/api/resource-management/inventory/with_status/`, fetchOptions),
+          fetch(`${API_BASE_URL}/api/resource-management/resources/`, fetchOptions)
+        ]);
+
+        // Log the response headers and status
+        console.log('Response details:', {
+          suppliers: {
+            status: suppliersRes.status,
+            headers: Object.fromEntries(suppliersRes.headers.entries()),
+          },
+          inventory: {
+            status: inventoryRes.status,
+            headers: Object.fromEntries(inventoryRes.headers.entries()),
+          },
+          resources: {
+            status: resourcesRes.status,
+            headers: Object.fromEntries(resourcesRes.headers.entries()),
+          },
+        });
 
         if (!suppliersRes.ok || !inventoryRes.ok || !resourcesRes.ok) {
+          const errors = await Promise.all([
+            suppliersRes.text(),
+            inventoryRes.text(),
+            resourcesRes.text()
+          ]);
+          console.error('Response errors:', errors);
           throw new Error('Failed to fetch data')
         }
 
@@ -111,9 +182,24 @@ export default function Procurement() {
           resourcesRes.json()
         ])
 
-        setSuppliers(suppliersData)
+        console.log('Inventory Data:', inventoryData); // Debug log
+        console.log('Resources Data:', resourcesData); // Debug log
+        console.log('Suppliers Data:', suppliersData); // Debug log
+
+        // Transform suppliers data from GeoJSON format
+        const transformedSuppliers = suppliersData.features.map((feature: any) => ({
+          id: feature.id,
+          name: feature.properties.name,
+          email: feature.properties.email,
+          phone: feature.properties.phone,
+          supplier_type: feature.properties.supplier_type,
+          status: feature.properties.status,
+          properties: feature.properties // Keep the full properties object for reference
+        }));
+
+        setSuppliers(transformedSuppliers)
         setInventoryItems(inventoryData)
-        setResources(resourcesData)
+        setResources(resourcesData.features)
       } catch (error) {
         console.error('Error fetching data:', error)
         toast({
@@ -130,9 +216,9 @@ export default function Procurement() {
   }, [])
 
   const filteredItems = inventoryItems.filter(item =>
-    (item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.supplier.name.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (!selectedResourceType || item.resource.resource_type === selectedResourceType)
+    (item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.supplier?.name?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+    (!selectedResourceType || item.resource?.resource_type === selectedResourceType)
   )
 
   const filteredLocations = resources.filter(resource =>
@@ -146,15 +232,14 @@ export default function Procurement() {
   const placeOrder = async () => {
     if (selectedItem && selectedSupplier && orderQuantity) {
       try {
-        const response = await fetch('/api/resource-management/requests/', {
+        const response = await fetch(`${API_BASE_URL}/api/resource-management/requests/`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: getAuthHeaders(),
+          credentials: 'include',
           body: JSON.stringify({
-        item: selectedItem,
-        quantity: parseInt(orderQuantity),
-        supplier: selectedSupplier,
+            item: selectedItem,
+            quantity: parseInt(orderQuantity),
+            supplier: selectedSupplier,
             status: 'pending'
           }),
         })
@@ -164,10 +249,10 @@ export default function Procurement() {
         }
 
         const newOrder = await response.json()
-      setOrders([...orders, newOrder])
-      setSelectedItem('')
-      setSelectedSupplier('')
-      setOrderQuantity('')
+        setOrders([...orders, newOrder])
+        setSelectedItem('')
+        setSelectedSupplier('')
+        setOrderQuantity('')
         
         toast({
           title: "Order placed successfully",
@@ -199,17 +284,16 @@ export default function Procurement() {
 
       const resourcesData = filteredLocations.map(resource => ({
         id: resource.id,
-        name: resource.name,
+        name: resource.properties.name,
         location: resource.location,
         capacity: resource.capacity
       }))
 
       // Call backend API to allocate resources
-      const response = await fetch('/api/resource-management/allocate-procurement/', {
+      const response = await fetch(`${API_BASE_URL}/api/resource-management/allocate-procurement/`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
+        credentials: 'include',
         body: JSON.stringify({ requests, resources: resourcesData }),
       })
 
@@ -399,74 +483,84 @@ export default function Procurement() {
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
-                <CardTitle>Inventory Items</CardTitle>
+                <CardTitle>Inventory Items ({filteredItems.length})</CardTitle>
                 <div className="flex items-center space-x-2">
-          <Search className="w-5 h-5 text-gray-500" />
-          <Input
-            placeholder="Search items or suppliers..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
-        </div>
+                  <Search className="w-5 h-5 text-gray-500" />
+                  <Input
+                    placeholder="Search items or suppliers..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="max-w-sm"
+                  />
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Item Name</TableHead>
-              <TableHead>Current Stock</TableHead>
-              <TableHead>Supplier</TableHead>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Item Name</TableHead>
+                    <TableHead>Current Stock</TableHead>
+                    <TableHead>Capacity</TableHead>
+                    <TableHead>Supplier</TableHead>
                     <TableHead>Type</TableHead>
-              <TableHead>Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredItems.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell>{item.name}</TableCell>
-                      <TableCell>{item.quantity}</TableCell>
-                      <TableCell>{item.supplier.name}</TableCell>
-                      <TableCell>{item.resource.resource_type}</TableCell>
-                <TableCell>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="outline">Order</Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
-                      <DialogHeader>
-                        <DialogTitle>Place Order for {item.name}</DialogTitle>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="order-quantity" className="text-right">
-                            Quantity
-                          </Label>
-                          <Input
-                            id="order-quantity"
-                            type="number"
-                            className="col-span-3"
-                            onChange={(e) => setOrderQuantity(e.target.value)}
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button onClick={() => {
-                          placeOrder();
-                          setSelectedItem(item.name);
-                                setSelectedSupplier(item.supplier.name);
-                        }}>
-                          Place Order
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                    <TableHead>Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredItems.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-4">
+                        No inventory items found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredItems.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{item.name}</TableCell>
+                        <TableCell>{item.quantity}</TableCell>
+                        <TableCell>{item.capacity}</TableCell>
+                        <TableCell>{item.supplier?.name || 'N/A'}</TableCell>
+                        <TableCell>{item.resource?.resource_type || 'N/A'}</TableCell>
+                        <TableCell>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="outline">Order</Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[425px]">
+                              <DialogHeader>
+                                <DialogTitle>Place Order for {item.name}</DialogTitle>
+                              </DialogHeader>
+                              <div className="grid gap-4 py-4">
+                                <div className="grid grid-cols-4 items-center gap-4">
+                                  <Label htmlFor="order-quantity" className="text-right">
+                                    Quantity
+                                  </Label>
+                                  <Input
+                                    id="order-quantity"
+                                    type="number"
+                                    className="col-span-3"
+                                    onChange={(e) => setOrderQuantity(e.target.value)}
+                                  />
+                                </div>
+                              </div>
+                              <DialogFooter>
+                                <Button onClick={() => {
+                                  setSelectedItem(item.name);
+                                  setSelectedSupplier(item.supplier?.name || '');
+                                  placeOrder();
+                                }}>
+                                  Place Order
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
       </div>

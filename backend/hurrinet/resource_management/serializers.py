@@ -1,6 +1,13 @@
 from rest_framework import serializers
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
-from .models import Resource, InventoryItem, ResourceRequest, Distribution, Supplier
+from .models import (
+    Resource,
+    InventoryItem,
+    ResourceRequest,
+    Distribution,
+    Supplier,
+    Transfer,
+)
 
 
 class ResourceMinimalSerializer(serializers.ModelSerializer):
@@ -204,3 +211,54 @@ class AggregatedStockLevelSerializer(serializers.Serializer):
     percentage = serializers.FloatField()
     status = serializers.CharField()
     locations = AggregatedStockLocationSerializer(many=True)
+
+
+class TransferSerializer(serializers.ModelSerializer):
+    """Serializer for inventory transfers"""
+
+    item = serializers.CharField(source="item.name")
+    source = serializers.CharField(source="source.name")
+    destination = serializers.CharField(source="destination.name")
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+
+    class Meta:
+        model = Transfer
+        fields = [
+            "id",
+            "item",
+            "source",
+            "destination",
+            "quantity",
+            "status",
+            "status_display",
+            "notes",
+            "created_at",
+            "completed_at",
+        ]
+
+    def create(self, validated_data):
+        item_name = validated_data.pop("item")["name"]
+        source_name = validated_data.pop("source")["name"]
+        destination_name = validated_data.pop("destination")["name"]
+
+        try:
+            item = InventoryItem.objects.get(name=item_name)
+            source = Resource.objects.get(name=source_name)
+            destination = Resource.objects.get(name=destination_name)
+
+            if item.quantity < validated_data["quantity"]:
+                raise serializers.ValidationError(
+                    f"Insufficient quantity. Available: {item.quantity}"
+                )
+
+            transfer = Transfer.objects.create(
+                item=item, source=source, destination=destination, **validated_data
+            )
+
+            return transfer
+
+        except InventoryItem.DoesNotExist:
+            raise serializers.ValidationError(f"Item '{item_name}' not found")
+        except Resource.DoesNotExist as e:
+            name = source_name if "source" in str(e) else destination_name
+            raise serializers.ValidationError(f"Resource '{name}' not found")
