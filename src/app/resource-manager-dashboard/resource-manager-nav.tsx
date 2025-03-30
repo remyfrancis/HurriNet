@@ -37,11 +37,6 @@ const navItems = [
     icon: ShoppingCart,
   },
   {
-    title: 'Distribution',
-    href: '/resource-manager-dashboard/procurement/inventory-transfer',
-    icon: Truck,
-  },
-  {
     title: 'Suppliers',
     href: '/resource-manager-dashboard/suppliers',
     icon: PhoneCall,

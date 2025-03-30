@@ -36,6 +36,15 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/use-toast"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 // Define the inventory item type
 interface InventoryItem {
@@ -48,6 +57,7 @@ interface InventoryItem {
   resource_name: string;
   status: string;
   last_updated: string;
+  supplier_id: number;
 }
 
 // Define the resource type
@@ -88,8 +98,12 @@ export default function InventoryPage() {
     quantity: 0,
     capacity: 0,
     unit: '',
-    resource: ''
+    resource: '',
+    supplier: ''
   })
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10); // Items per page
 
   // Fetch resources for the dropdown
   const fetchResources = async () => {
@@ -198,7 +212,8 @@ export default function InventoryPage() {
           resource: 1,
           resource_name: 'Castries Water Distribution Center',
           status: 'Sufficient',
-          last_updated: '2023-06-20'
+          last_updated: '2023-06-20',
+          supplier_id: 1
         },
         { 
           id: 2, 
@@ -209,7 +224,8 @@ export default function InventoryPage() {
           resource: 2,
           resource_name: 'Gros Islet Supply Depot',
           status: 'Moderate',
-          last_updated: '2023-06-18'
+          last_updated: '2023-06-18',
+          supplier_id: 2
         },
         { 
           id: 3, 
@@ -220,7 +236,8 @@ export default function InventoryPage() {
           resource: 3,
           resource_name: 'Soufrière Medical Center',
           status: 'Low',
-          last_updated: '2023-06-15'
+          last_updated: '2023-06-15',
+          supplier_id: 3
         },
       ]
       setInventoryItems(mockData)
@@ -341,7 +358,7 @@ export default function InventoryPage() {
       }
       
       // Send delete request to API
-      const response = await fetch(`/api/resource_management/inventory/${itemToDelete.id}`, {
+      const response = await fetch(`/api/resource_management/inventory/inventory/${itemToDelete.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -382,7 +399,8 @@ export default function InventoryPage() {
       quantity: item.quantity,
       capacity: item.capacity,
       unit: item.unit,
-      resource: item.resource.toString()
+      resource: item.resource.toString(),
+      supplier: item.supplier_id.toString()
     })
     setIsUpdateDialogOpen(true)
   }
@@ -412,9 +430,9 @@ export default function InventoryPage() {
     setIsSubmitting(true)
     
     try {
-      // Validate form
-      if (!updateItem.name || !updateItem.unit || !updateItem.resource || updateItem.quantity <= 0 || updateItem.capacity <= 0) {
-        throw new Error('Please fill in all required fields with valid values')
+      // Validate form - including supplier now
+      if (!updateItem.name || !updateItem.unit || !updateItem.resource || !updateItem.supplier || updateItem.quantity < 0 || updateItem.capacity <= 0) {
+        throw new Error('Please fill in all required fields with valid values (Quantity >= 0, Capacity > 0)')
       }
       
       const token = localStorage.getItem('accessToken')
@@ -428,11 +446,17 @@ export default function InventoryPage() {
         quantity: updateItem.quantity,
         capacity: updateItem.capacity,
         unit: updateItem.unit,
-        resource: updateItem.resource
+        resource: parseInt(updateItem.resource, 10),
+        supplier: parseInt(updateItem.supplier, 10)
       }
+
+      // Basic validation check
+       if (isNaN(itemData.resource) || isNaN(itemData.supplier)) {
+         throw new Error("Invalid Resource or Supplier ID selected.");
+       }
       
       // Send data to API
-      const response = await fetch(`/api/resource_management/inventory/${itemToUpdate.id}`, {
+      const response = await fetch(`/api/resource_management/inventory/inventory/${itemToUpdate.id}/`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -443,7 +467,13 @@ export default function InventoryPage() {
       
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.detail || 'Failed to update inventory item')
+        // Log the detailed error from DRF
+        console.error("API Update Error:", errorData); 
+        // Construct a more informative error message
+        const errorDetails = Object.entries(errorData)
+          .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
+          .join('; ');
+        throw new Error(`Failed to update inventory item: ${errorDetails || response.statusText}`)
       }
       
       // Success - close dialog and refresh data
@@ -483,13 +513,11 @@ export default function InventoryPage() {
   // Fetch data when status filter changes
   useEffect(() => {
     if (isAuthenticated) {
-      fetchInventoryData(statusFilter, locationFilter)
+      // Reset page to 1 when filters change before fetching
+      setCurrentPage(1); 
+      fetchInventoryData(statusFilter, locationFilter);
     }
-  }, [statusFilter, locationFilter, isAuthenticated])
-
-  if (!isAuthenticated) {
-    return null
-  }
+  }, [statusFilter, locationFilter, isAuthenticated]); // Removed currentPage from dependencies here
 
   // Apply filters to the inventory items
   const filteredItems = inventoryItems.filter(item => {
@@ -505,6 +533,33 @@ export default function InventoryPage() {
     
     return true
   })
+
+  // Recalculate pagination when items or page change, but not on initial filter application
+  useEffect(() => {
+    if (filteredItems.length > 0 && currentPage > Math.ceil(filteredItems.length / itemsPerPage)) {
+      setCurrentPage(Math.ceil(filteredItems.length / itemsPerPage) || 1);
+    }
+  }, [filteredItems, itemsPerPage, currentPage]);
+
+  if (!isAuthenticated) {
+    return null
+  }
+
+  // --- Pagination Logic ---
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  // Slice the *filtered* items for the current page
+  const paginatedItems = filteredItems.slice(startIndex, endIndex); 
+
+  const handlePreviousPage = () => {
+    setCurrentPage(prev => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  };
+  // --- End Pagination Logic ---
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -620,9 +675,9 @@ export default function InventoryPage() {
                     <SelectValue placeholder="Select a location" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Locations</SelectItem>
+                    <SelectItem key="all-locations" value="all">All Locations</SelectItem>
                     {uniqueLocations.map(location => (
-                      <SelectItem key={location} value={location}>
+                      <SelectItem key={`loc-${location}`} value={location}>
                         {location}
                       </SelectItem>
                     ))}
@@ -684,14 +739,14 @@ export default function InventoryPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredItems.length === 0 ? (
+                      {paginatedItems.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center py-4">
-                            No inventory items found
+                            No inventory items found for the current filters.
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredItems.map((item) => (
+                        paginatedItems.map((item) => (
                           <TableRow key={item.id}>
                             <TableCell className="font-medium">{item.name}</TableCell>
                             <TableCell>{item.resource_name}</TableCell>
@@ -732,6 +787,30 @@ export default function InventoryPage() {
                       )}
                     </TableBody>
                   </Table>
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex justify-center items-center space-x-2 mt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handlePreviousPage}
+                        disabled={currentPage === 1}
+                      >
+                        Previous
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        Page {currentPage} of {totalPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleNextPage}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
