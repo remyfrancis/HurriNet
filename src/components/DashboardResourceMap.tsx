@@ -24,6 +24,8 @@ interface GeoJSONFeature {
     resource_type: string;
     description?: string;
     status: string;
+    capacity: number;
+    current_count: number;
     coverage_area?: {
       type: "Polygon";
       coordinates: [number, number][][];
@@ -37,6 +39,8 @@ interface Resource {
   resource_type: string;
   description?: string;
   status: string;
+  capacity: number;
+  current_count: number;
   location: {
     type: string;
     coordinates: [number, number];
@@ -47,8 +51,15 @@ interface Resource {
   };
 }
 
+export interface SelectedResourceInfo {
+    id: number;
+    name: string;
+    capacity: number;
+    current_count: number;
+}
+
 interface DashboardResourceMapProps {
-  onLocationSelect: (resourceId: number) => void;
+  onLocationSelect: (resourceInfo: SelectedResourceInfo) => void;
 }
 
 export function DashboardResourceMap({ onLocationSelect }: DashboardResourceMapProps) {
@@ -64,11 +75,13 @@ export function DashboardResourceMap({ onLocationSelect }: DashboardResourceMapP
       const token = localStorage.getItem('accessToken');
       if (!token) {
         const defaultResources = defaultResourceLocations.map(loc => ({
-          id: loc.id,  // Use the ID from default locations
+          id: loc.id || 0,
           name: loc.name,
           resource_type: loc.type,
           description: `Default ${loc.type.toLowerCase()} location`,
           status: 'AVAILABLE',
+          capacity: 100,
+          current_count: 50,
           location: {
             type: 'Point',
             coordinates: loc.coordinates as [number, number]
@@ -89,11 +102,13 @@ export function DashboardResourceMap({ onLocationSelect }: DashboardResourceMapP
 
       if (!response.ok) {
         const defaultResources = defaultResourceLocations.map(loc => ({
-          id: loc.id,  // Use the ID from default locations
+          id: loc.id || 0,
           name: loc.name,
           resource_type: loc.type,
           description: `Default ${loc.type.toLowerCase()} location`,
           status: 'AVAILABLE',
+          capacity: 100,
+          current_count: 50,
           location: {
             type: 'Point',
             coordinates: loc.coordinates as [number, number]
@@ -113,11 +128,13 @@ export function DashboardResourceMap({ onLocationSelect }: DashboardResourceMapP
           console.log('Processing feature:', feature);
           const coordinates = Array.isArray(feature.geometry) ? feature.geometry : feature.geometry.coordinates;
           return {
-            id: feature.properties.id,
+            id: feature.properties.id ?? 0,
             name: feature.properties.name,
             resource_type: feature.properties.resource_type,
             description: feature.properties.description,
             status: feature.properties.status,
+            capacity: feature.properties.capacity ?? 0,
+            current_count: feature.properties.current_count ?? 0,
             location: {
               type: 'Point',
               coordinates: coordinates
@@ -129,16 +146,24 @@ export function DashboardResourceMap({ onLocationSelect }: DashboardResourceMapP
         setResources(processedResources);
       } else if (Array.isArray(data)) {
         console.log('Raw data array:', data);
-        setResources(data);
+        const mappedData = data.map(res => ({
+          ...res,
+          id: res.id ?? 0,
+          capacity: res.capacity ?? 0,
+          current_count: res.current_count ?? 0
+        }));
+        setResources(mappedData);
       }
     } catch (err) {
       console.error('Error fetching resources:', err);
       const defaultResources = defaultResourceLocations.map(loc => ({
-        id: loc.id,  // Use the ID from default locations
+        id: loc.id || 0,
         name: loc.name,
         resource_type: loc.type,
         description: `Default ${loc.type.toLowerCase()} location`,
         status: 'AVAILABLE',
+        capacity: 100,
+        current_count: 50,
         location: {
           type: 'Point',
           coordinates: loc.coordinates as [number, number]
@@ -215,13 +240,23 @@ export function DashboardResourceMap({ onLocationSelect }: DashboardResourceMapP
 
   const handleMarkerClick = (resource: Resource) => {
     console.log('Marker clicked:', resource);
-    if (typeof resource.id === 'number' && !isNaN(resource.id)) {
-      console.log('Setting selected resource:', resource);
-      setSelectedResource(resource);  // Update the selected resource for the popup
-      console.log('Calling onLocationSelect with ID:', resource.id);
-      onLocationSelect(resource.id);  // Call the callback for stock levels
+    if (typeof resource.id === 'number' && !isNaN(resource.id) &&
+        typeof resource.capacity === 'number' &&
+        typeof resource.current_count === 'number') {
+      console.log('Setting selected resource for popup:', resource);
+      setSelectedResource(resource);
+
+      const resourceInfo: SelectedResourceInfo = {
+          id: resource.id,
+          name: resource.name,
+          capacity: resource.capacity,
+          current_count: resource.current_count
+      };
+
+      console.log('Calling onLocationSelect with info:', resourceInfo);
+      onLocationSelect(resourceInfo);
     } else {
-      console.log('Invalid resource ID:', resource.id);
+      console.error('Invalid or incomplete resource data for marker click:', resource);
     }
   };
 
@@ -253,8 +288,8 @@ export function DashboardResourceMap({ onLocationSelect }: DashboardResourceMapP
       >
         <NavigationControl showCompass={false} />
 
-        {resources.map((resource, index) => {
-          const uniqueId = resource.id ?? `fallback-${index}`;
+        {resources.map((resource) => {
+          const uniqueId = resource.id;
           return (
             <div key={`resource-container-${uniqueId}`}>
               {/* Coverage Area */}
