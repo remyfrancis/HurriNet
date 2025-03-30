@@ -25,6 +25,7 @@ from .serializers import (
     AggregatedStockLevelSerializer,
     TransferSerializer,
 )
+from rest_framework.views import APIView
 
 
 class ResourceViewSet(viewsets.ModelViewSet):
@@ -499,6 +500,18 @@ class SupplierViewSet(viewsets.ModelViewSet):
 
         serializer = InventoryItemSerializer(items, many=True)
         return Response(serializer.data)
+
+
+# View to get the last update timestamp for inventory
+class LastInventoryUpdateView(APIView):
+    """Returns the timestamp of the most recently updated inventory item."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        last_item = InventoryItem.objects.order_by("-updated_at").first()
+        last_update_time = last_item.updated_at if last_item else None
+        return Response({"last_update": last_update_time})
 
 
 # Add a simple test endpoint to verify the API is working

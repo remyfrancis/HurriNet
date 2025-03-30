@@ -11,17 +11,11 @@ router.register(r"distributions", views.DistributionViewSet)
 router.register(r"transfers", views.TransferViewSet)
 
 urlpatterns = [
-    path("", include(router.urls)),
-    # Stock level endpoints
+    # Define specific inventory paths BEFORE including the router
     path(
-        "resources/<int:pk>/stock-levels/",
-        views.ResourceViewSet.as_view({"get": "stock_levels"}),
-        name="resource-stock-levels",
-    ),
-    path(
-        "resources/all-stock-levels/",
-        views.ResourceViewSet.as_view({"get": "all_stock_levels"}),
-        name="all-stock-levels",
+        "inventory/last-update/",
+        views.LastInventoryUpdateView.as_view(),
+        name="inventory-last-update",
     ),
     path(
         "inventory/aggregated-stock-levels/",
@@ -33,29 +27,33 @@ urlpatterns = [
         views.InventoryItemViewSet.as_view({"get": "stock_status"}),
         name="stock-status",
     ),
-    # Explicitly register the allocation actions
     path(
         "inventory/allocate/",
         views.InventoryItemViewSet.as_view({"post": "allocate"}),
         name="inventory-allocate",
     ),
-    # path(
-    #     "inventory/optimize-allocation/",
-    #     views.InventoryItemViewSet.as_view({"post": "optimize_allocation"}),
-    #     name="inventory-optimize-allocation",
-    # ),
-    # Explicitly register the with_status action
     path(
         "inventory/with_status/",
         views.InventoryItemViewSet.as_view({"get": "with_status"}),
         name="inventory-with-status",
     ),
-    # Procurement allocation endpoint
+    # Now include the main router URLs
+    path("", include(router.urls)),
+    # Other paths (keep resource-specific ones separate if preferred)
+    path(
+        "resources/<int:pk>/stock-levels/",
+        views.ResourceViewSet.as_view({"get": "stock_levels"}),
+        name="resource-stock-levels",
+    ),
+    path(
+        "resources/all-stock-levels/",
+        views.ResourceViewSet.as_view({"get": "all_stock_levels"}),
+        name="all-stock-levels",
+    ),
     path(
         "allocate-procurement/",
         views.allocate_procurement_resources,
         name="allocate-procurement",
     ),
-    # Test endpoint
     path("test/", views.api_test, name="api-test"),
 ]

@@ -35,6 +35,7 @@ export default function ResourceManagerDashboard() {
   const [selectedLocation, setSelectedLocation] = useState<number | null>(null)
   const [stockLevels, setStockLevels] = useState<LocationStockLevels | null>(null)
   const [loading, setLoading] = useState(false)
+  const [lastInventoryUpdate, setLastInventoryUpdate] = useState<string | null>(null)
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken')
@@ -44,6 +45,45 @@ export default function ResourceManagerDashboard() {
     }
     setIsAuthenticated(true)
   }, [router])
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true)
+      try {
+        const token = localStorage.getItem('accessToken')
+        if (!token) {
+          throw new Error('Authentication token not found.')
+        }
+
+        // Fetch last inventory update time
+        const resLastUpdate = await fetch('/api/resource-management/inventory/last-update/', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        })
+        if (!resLastUpdate.ok) throw new Error('Failed to fetch last inventory update time')
+        const dataLastUpdate = await resLastUpdate.json()
+        if (dataLastUpdate.last_update) {
+          // Format the date
+          const date = new Date(dataLastUpdate.last_update)
+          const formattedDate = date.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          })
+          setLastInventoryUpdate(formattedDate)
+        } else {
+          setLastInventoryUpdate('N/A')
+        }
+      } catch (err) {
+        console.error("Dashboard Fetch Error:", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   const fetchStockLevels = async (resourceId: number) => {
     console.log('Fetching stock levels for resource:', resourceId);
@@ -207,7 +247,7 @@ export default function ResourceManagerDashboard() {
       content: (
         <div className="flex flex-col h-full justify-between">
           <div>
-            <p className="mb-2">Last update: 2023-06-20</p>
+            <p className="mb-2">Last update: {loading ? 'Loading...' : lastInventoryUpdate || 'N/A'}</p>
           </div>
           <Button className="w-full">Update Inventory</Button>
         </div>
