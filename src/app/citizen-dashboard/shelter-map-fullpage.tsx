@@ -9,6 +9,8 @@ import { Home, Phone, MapPin, Users, X, Navigation, Clock } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
+import { MedicalFacility, mockMedicalFacilities as importedMedicalFacilities } from './data/medical-facilities'
+import { Shelter, mockShelters as importedShelters } from './data/shelters'
 
 // Dynamically import Leaflet components to avoid SSR issues
 const MapContainer = dynamic(() => import('react-leaflet').then((mod) => mod.MapContainer), {
@@ -23,36 +25,6 @@ const Marker = dynamic(() => import('react-leaflet').then((mod) => mod.Marker), 
 const Popup = dynamic(() => import('react-leaflet').then((mod) => mod.Popup), {
   ssr: false,
 })
-
-interface Shelter {
-  id: number
-  name: string
-  address: string
-  capacity: number
-  current_occupancy: number
-  latitude: number
-  longitude: number
-  status: 'OPEN' | 'CLOSED' | 'FULL'
-  phone?: string
-  amenities?: string[]
-  last_updated?: string
-  description?: string
-  type: 'shelter'
-}
-
-interface MedicalFacility {
-  id: number
-  name: string
-  address: string
-  latitude: number
-  longitude: number
-  status: 'OPEN' | 'LIMITED' | 'CLOSED'
-  services?: string[]
-  phone?: string
-  last_updated?: string
-  description?: string
-  type: 'medical'
-}
 
 interface Incident {
   id: number
@@ -90,7 +62,8 @@ export function ShelterMapFullpage({ onSelectItem }: ShelterMapFullpageProps) {
           return
         }
 
-        // Fetch shelters
+        // Fetch shelters - REMOVED API CALL, using imported mock data now
+        /* 
         const sheltersResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/shelters/`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -123,37 +96,11 @@ export function ShelterMapFullpage({ onSelectItem }: ShelterMapFullpageProps) {
         }))
         console.log('Typed shelters after mapping:', typedShelters);
         setShelters(typedShelters)
+        */
+        setShelters(importedShelters); // Use imported mock shelter data
 
-        // Fetch medical facilities (mock data for now)
-        const mockMedicalFacilities: MedicalFacility[] = [
-          {
-            id: 1,
-            name: 'Saint Lucia General Hospital',
-            address: '123 Hospital Road, Castries',
-            latitude: 13.9094,
-            longitude: -60.9789,
-            status: 'OPEN',
-            services: ['Emergency Care', 'Surgery', 'Pediatrics', 'Obstetrics'],
-            phone: '+1 (555) 987-6543',
-            last_updated: new Date().toISOString(),
-            description: 'Main hospital facility with full emergency services.',
-            type: 'medical'
-          },
-          {
-            id: 2,
-            name: 'Soufriere Medical Center',
-            address: '45 Health Street, Soufriere',
-            latitude: 13.8546,
-            longitude: -61.0558,
-            status: 'LIMITED',
-            services: ['First Aid', 'Basic Care'],
-            phone: '+1 (555) 456-7890',
-            last_updated: new Date().toISOString(),
-            description: 'Limited medical services available due to current conditions.',
-            type: 'medical'
-          }
-        ]
-        setMedicalFacilities(mockMedicalFacilities)
+        // Fetch medical facilities - Now using imported mock data
+        setMedicalFacilities(importedMedicalFacilities);
 
         // Fetch active incidents from the database
         try {
@@ -611,7 +558,7 @@ export function ShelterMapFullpage({ onSelectItem }: ShelterMapFullpageProps) {
   const createMedicalIcon = (status: MedicalFacility['status']) => {
     return L.divIcon({
       className: 'custom-marker',
-      html: `<div style="width: 24px; height: 24px; border-radius: 50%; background-color: ${getMedicalMarkerColor(status) === 'green' ? '#22c55e' : 
+      html: `<div style="width: 24px; height: 24px; border-radius: 50%; background-color: ${getMedicalMarkerColor(status) === 'green' ? '#8b5cf6' : 
         getMedicalMarkerColor(status) === 'orange' ? '#f97316' : 
         getMedicalMarkerColor(status) === 'red' ? '#ef4444' : 
         '#6b7280'}; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 12px;">M</div>`,

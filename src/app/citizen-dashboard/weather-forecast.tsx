@@ -67,30 +67,32 @@ export function WeatherForecast() {
   if (error) return <div className="text-red-500">Error: {error}</div>
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-      {forecast.map((day) => (
-        <Card key={day.id}>
-          <CardContent className="p-4">
-            <div className="flex flex-col items-center space-y-2">
-              <WeatherIcon conditions={day.conditions} />
-              <div className="text-sm font-medium">{new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}</div>
-              <div className="flex items-center">
-                <span className="text-xs text-gray-500 mr-1">High:</span>
-                <span className="text-lg font-bold">{Math.round(day.high_temp)}°</span>
+    <div className="flex justify-center">
+      <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+        {forecast.map((day) => (
+          <Card key={day.id}>
+            <CardContent className="p-4">
+              <div className="flex flex-col items-center space-y-2">
+                <WeatherIcon conditions={day.conditions} />
+                <div className="text-sm font-medium">{new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' })}</div>
+                <div className="flex items-center">
+                  <span className="text-xs text-gray-500 mr-1">High:</span>
+                  <span className="text-lg font-bold">{Math.round(day.high_temp)}°</span>
+                </div>
+                <div className="flex items-center">
+                  <span className="text-xs text-gray-500 mr-1">Low:</span>
+                  <span className="text-sm text-gray-500">{Math.round(day.low_temp)}°</span>
+                </div>
+                <div className="text-xs text-gray-500">
+                  Wind: {day.wind_speed > 0 
+                    ? `${(day.wind_speed * 2.237).toFixed(1)} mph` 
+                    : 'Calm'}
+                </div>
               </div>
-              <div className="flex items-center">
-                <span className="text-xs text-gray-500 mr-1">Low:</span>
-                <span className="text-sm text-gray-500">{Math.round(day.low_temp)}°</span>
-              </div>
-              <div className="text-xs text-gray-500">
-                Wind: {day.wind_speed > 0 
-                  ? `${(day.wind_speed * 2.237).toFixed(1)} mph` 
-                  : 'Calm'}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   )
 } 

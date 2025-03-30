@@ -104,7 +104,11 @@ export function CitizenFeed() {
       }
 
       const data = await response.json()
-      setPosts(data)
+      // Sort posts by created_at in descending order
+      const sortedPosts = data.sort((a: Post, b: Post) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      setPosts(sortedPosts)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch posts')
     } finally {

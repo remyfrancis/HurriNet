@@ -32,17 +32,20 @@ export default function CitizenDashboard() {
       <CitizenNav />
       <main className="flex-1 p-8">
         <div className="space-y-8">
-          {/* Weather Section */}
-          <section>
-            <h2 className="text-2xl font-bold mb-4">Weather Forecast</h2>
-            <WeatherForecast />
-          </section>
+          {/* Weather & Alerts Row */}
+          <div className="flex gap-8">
+            {/* Weather Section */}
+            <section className="w-1/2">
+              <h2 className="text-2xl font-bold mb-4">Weather Forecast</h2>
+              <WeatherForecast />
+            </section>
 
-          {/* Alerts Section */}
-          <section>
-            <h2 className="text-2xl font-bold mb-4">Active Alerts</h2>
-            <AlertsList />
-          </section>
+            {/* Alerts Section */}
+            <section className="w-1/2">
+              <h2 className="text-2xl font-bold mb-4">Active Alerts</h2>
+              <AlertsList />
+            </section>
+          </div>
 
           {/* Main Content Grid */}
           <div className="grid grid-cols-2 gap-8">

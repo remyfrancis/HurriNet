@@ -293,40 +293,43 @@ export function AlertsList({ forceListView = false }: AlertsListProps) {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Alert count indicator */}
-      <div className="absolute top-2 right-2 z-10 bg-background/80 backdrop-blur-sm px-2 py-1 rounded-md text-xs">
-        {currentIndex + 1} / {alerts.length}
-      </div>
-      
-      {/* Control buttons */}
-      <div className="absolute top-2 left-2 z-10 flex gap-2">
-        {/* Pause/Play button */}
-        {alerts.length > 1 && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="bg-background/80 backdrop-blur-sm rounded-full"
-            onClick={togglePause}
-          >
-            {isPaused ? (
-              <PlayCircle className="h-5 w-5" />
-            ) : (
-              <PauseCircle className="h-5 w-5" />
-            )}
-          </Button>
-        )}
-        
-        {/* View all alerts button */}
-        {alerts.length > 1 && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="bg-background/80 backdrop-blur-sm rounded-full"
-            onClick={toggleViewAllAlerts}
-          >
-            <List className="h-5 w-5" />
-          </Button>
-        )}
+      {/* Header for controls and count - moved from absolute positioning */}
+      <div className="flex justify-between items-center mb-2 px-1">
+        {/* Control buttons */} 
+        <div className="flex gap-2"> 
+          {/* Pause/Play button */} 
+          {alerts.length > 1 && ( 
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full" // Removed bg/backdrop
+              onClick={togglePause}
+            >
+              {isPaused ? (
+                <PlayCircle className="h-5 w-5" />
+              ) : (
+                <PauseCircle className="h-5 w-5" />
+              )}
+            </Button>
+          )}
+          
+          {/* View all alerts button */} 
+          {alerts.length > 1 && !forceListView && ( // Added !forceListView check
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full" // Removed bg/backdrop
+              onClick={toggleViewAllAlerts}
+            >
+              <List className="h-5 w-5" />
+            </Button>
+          )}
+        </div>
+
+        {/* Alert count indicator */}
+        <div className="text-xs text-muted-foreground px-2 py-1 rounded-md">
+          {currentIndex + 1} / {alerts.length}
+        </div>
       </div>
       
       {/* Carousel container */}
