@@ -189,7 +189,12 @@ export default function ResourceManagerDashboard() {
             <li>Medical Supplies: 500 units</li>
             <li>Non-perishable Food: 1000 kg</li>
           </ul>
-          <Button className="w-full mt-2">New Procurement</Button>
+          <Button 
+            className="w-full mt-2" 
+            onClick={() => router.push('/resource-manager-dashboard/procurement')}
+          >
+            New Procurement
+          </Button>
         </div>
       )
     },

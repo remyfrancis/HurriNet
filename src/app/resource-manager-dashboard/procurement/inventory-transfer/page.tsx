@@ -114,6 +114,129 @@ interface Transfer {
   created_at: string
 }
 
+// Mock Data
+const MOCK_RESOURCES: ResourceFeature[] = [
+  {
+    type: 'Feature',
+    geometry: [14.0101, -60.9789],
+    id: 1,
+    properties: {
+      name: "St. Lucia Medical Center",
+      resource_type: "MEDICAL",
+      status: "ACTIVE",
+      description: "Main medical facility in Castries",
+      capacity: 1000,
+      current_count: 750,
+      current_workload: 75,
+      address: "Castries, St. Lucia"
+    }
+  },
+  {
+    type: 'Feature',
+    geometry: [13.9094, -60.9789],
+    id: 2,
+    properties: {
+      name: "Vieux Fort Supply Depot",
+      resource_type: "SUPPLIES",
+      status: "ACTIVE",
+      description: "Main supply warehouse",
+      capacity: 2000,
+      current_count: 1500,
+      current_workload: 65,
+      address: "Vieux Fort, St. Lucia"
+    }
+  },
+  {
+    type: 'Feature',
+    geometry: [14.0167, -60.9833],
+    id: 3,
+    properties: {
+      name: "Castries Water Treatment",
+      resource_type: "WATER",
+      status: "ACTIVE",
+      description: "Water treatment and storage facility",
+      capacity: 500,
+      current_count: 400,
+      current_workload: 80,
+      address: "Castries, St. Lucia"
+    }
+  }
+];
+
+const MOCK_INVENTORY: InventoryItem[] = [
+  {
+    id: 1,
+    name: "Medical Supplies Kit",
+    quantity: 200,
+    capacity: 300,
+    unit: "kits",
+    resource: {
+      id: 1,
+      name: "St. Lucia Medical Center"
+    },
+    supplier: {
+      id: 1,
+      name: "St. Lucia Medical Supplies Ltd."
+    },
+    status: "IN_STOCK"
+  },
+  {
+    id: 2,
+    name: "Water Purification Tablets",
+    quantity: 5000,
+    capacity: 10000,
+    unit: "tablets",
+    resource: {
+      id: 3,
+      name: "Castries Water Treatment"
+    },
+    supplier: {
+      id: 2,
+      name: "Caribbean Water Solutions"
+    },
+    status: "IN_STOCK"
+  },
+  {
+    id: 3,
+    name: "Emergency Food Supplies",
+    quantity: 1000,
+    capacity: 2000,
+    unit: "boxes",
+    resource: {
+      id: 2,
+      name: "Vieux Fort Supply Depot"
+    },
+    supplier: {
+      id: 3,
+      name: "Regional Food Bank"
+    },
+    status: "IN_STOCK"
+  }
+];
+
+const MOCK_TRANSFERS: Transfer[] = [
+  {
+    id: 1,
+    item: "Medical Supplies Kit",
+    quantity: 50,
+    source: "St. Lucia Medical Center",
+    destination: "Vieux Fort Supply Depot",
+    status: "pending",
+    status_display: "Pending",
+    created_at: "2024-03-17T10:00:00Z"
+  },
+  {
+    id: 2,
+    item: "Water Purification Tablets",
+    quantity: 1000,
+    source: "Castries Water Treatment",
+    destination: "Vieux Fort Supply Depot",
+    status: "completed",
+    status_display: "Completed",
+    created_at: "2024-03-16T15:30:00Z"
+  }
+];
+
 export default function InventoryTransfer() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedResourceType, setSelectedResourceType] = useState<string>('')
@@ -129,53 +252,36 @@ export default function InventoryTransfer() {
   const [transferQuantity, setTransferQuantity] = useState('')
   const [showTransferDialog, setShowTransferDialog] = useState(false)
 
-  // Fetch data from the backend
+  // Replace the useEffect with mock data
   useEffect(() => {
-    const fetchData = async () => {
+    // Simulate API call delay
+    const loadMockData = async () => {
       try {
-        const headers = {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        }
-
-        const [resourcesRes, inventoryRes, transfersRes] = await Promise.all([
-          fetch(`${API_BASE_URL}/api/resource-management/resources/`, { headers }),
-          fetch(`${API_BASE_URL}/api/resource-management/inventory/with_status/`, { headers }),
-          fetch(`${API_BASE_URL}/api/resource-management/transfers/`, { headers })
-        ])
-
-        if (!resourcesRes.ok || !inventoryRes.ok || !transfersRes.ok) {
-          throw new Error('Failed to fetch data')
-        }
-
-        const [resourcesData, inventoryData, transfersData] = await Promise.all([
-          resourcesRes.json() as Promise<ResourceResponse>,
-          inventoryRes.json(),
-          transfersRes.json()
-        ])
-
-        setResources(resourcesData.features)
-        setInventoryItems(inventoryData)
-        setTransfers(transfersData)
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        setResources(MOCK_RESOURCES);
+        setInventoryItems(MOCK_INVENTORY);
+        setTransfers(MOCK_TRANSFERS);
       } catch (error) {
-        console.error('Error fetching data:', error)
+        console.error('Error loading mock data:', error);
         toast({
           title: "Error loading data",
           description: "Failed to load data. Please try again.",
           variant: "destructive",
-        })
+        });
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchData()
-  }, [])
+    loadMockData();
+  }, []);
 
   const filteredItems = inventoryItems.filter(item =>
     (item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.resource?.name?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (!selectedResourceType || resources.find(r => r.id === item.resource?.id)?.properties.resource_type === selectedResourceType)
+    (!selectedResourceType || selectedResourceType === 'ALL' || resources.find(r => r.id === item.resource?.id)?.properties.resource_type === selectedResourceType)
   )
 
   // Filter available items based on selected source
@@ -183,86 +289,76 @@ export default function InventoryTransfer() {
     !sourceResource || item.resource?.id.toString() === sourceResource
   )
 
+  // Modify handleTransfer to work with mock data
   const handleTransfer = async () => {
     if (!selectedItem || !sourceResource || !destinationResource || !transferQuantity) {
       toast({
         title: "Missing information",
         description: "Please fill in all transfer details.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/resource-management/transfers/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-        body: JSON.stringify({
-          item_id: selectedItem,
-          source_id: sourceResource,
-          destination_id: destinationResource,
-          quantity: parseInt(transferQuantity),
-        }),
-      })
+      // Create new mock transfer
+      const newTransfer: Transfer = {
+        id: transfers.length + 1,
+        item: inventoryItems.find(item => item.id.toString() === selectedItem)?.name || "",
+        quantity: parseInt(transferQuantity),
+        source: resources.find(r => r.id.toString() === sourceResource)?.properties.name || "",
+        destination: resources.find(r => r.id.toString() === destinationResource)?.properties.name || "",
+        status: "pending",
+        status_display: "Pending",
+        created_at: new Date().toISOString()
+      };
 
-      if (!response.ok) {
-        throw new Error('Failed to create transfer')
-      }
-
-      const newTransfer = await response.json()
-      setTransfers([...transfers, newTransfer])
-      setShowTransferDialog(false)
+      setTransfers([...transfers, newTransfer]);
+      setShowTransferDialog(false);
       
       toast({
         title: "Transfer initiated",
         description: "The inventory transfer has been started.",
-      })
+      });
     } catch (error) {
-      console.error('Error creating transfer:', error)
+      console.error('Error creating transfer:', error);
       toast({
         title: "Transfer failed",
         description: "Failed to initiate the transfer. Please try again.",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
+  // Modify handleTransferAction to work with mock data
   const handleTransferAction = async (transferId: number, action: 'complete' | 'cancel') => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/resource-management/transfers/${transferId}/${action}/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-      })
+      const updatedTransfers = transfers.map(transfer => {
+        if (transfer.id === transferId) {
+          return {
+            ...transfer,
+            status: action === 'complete' ? 'completed' : 'cancelled',
+            status_display: action === 'complete' ? 'Completed' : 'Cancelled'
+          };
+        }
+        return transfer;
+      });
 
-      if (!response.ok) {
-        throw new Error(`Failed to ${action} transfer`)
-      }
-
-      // Update the transfer in the list
-      const updatedTransfer = await response.json()
-      setTransfers(transfers.map(t => 
-        t.id === transferId ? updatedTransfer : t
-      ))
+      setTransfers(updatedTransfers);
 
       toast({
         title: `Transfer ${action}d`,
         description: `The transfer has been ${action}d successfully.`,
-      })
+      });
     } catch (error) {
-      console.error(`Error ${action}ing transfer:`, error)
+      console.error(`Error ${action}ing transfer:`, error);
       toast({
         title: `${action} failed`,
         description: `Failed to ${action} the transfer. Please try again.`,
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   if (isLoading) {
     return (
@@ -336,7 +432,7 @@ export default function InventoryTransfer() {
                   <SelectValue placeholder="Filter by type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Types</SelectItem>
+                  <SelectItem value="ALL">All Types</SelectItem>
                   {Array.from(new Set(resources.map(r => r.properties.resource_type))).map(type => (
                     <SelectItem key={type} value={type}>
                       {type}

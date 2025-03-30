@@ -148,3 +148,8 @@ interface Resource {
       return districtCoords[incident.district as keyof typeof districtCoords];
     }
   }
+
+
+
+  
+

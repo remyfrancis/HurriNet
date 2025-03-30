@@ -38,18 +38,13 @@ const navItems = [
   },
   {
     title: 'Distribution',
-    href: '/resource-manager-dashboard/distribution',
+    href: '/resource-manager-dashboard/procurement/inventory-transfer',
     icon: Truck,
   },
   {
     title: 'Suppliers',
     href: '/resource-manager-dashboard/suppliers',
     icon: PhoneCall,
-  },
-  {
-    title: 'Reports',
-    href: '/resource-manager-dashboard/reports',
-    icon: ClipboardList,
   },
   {
     title: 'Chat',
