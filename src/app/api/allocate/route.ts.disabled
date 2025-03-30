@@ -1,0 +1,150 @@
+import { NextResponse } from "next/server"
+// import { runHungarianAlgorithm } from "@/lib/resources/hungarian-algorithm"
+import { cookies } from 'next/headers'
+
+interface InventoryItem {
+  id: number
+  name: string
+  quantity: number
+  resource: any
+  supplier?: {
+    id: number
+  }
+}
+
+interface GeoJSONFeature {
+  id: number
+  properties: {
+    name: string
+    capacity: number
+    current_count: number
+    location?: {
+      coordinates: [number, number] // [longitude, latitude]
+    }
+  }
+}
+
+interface APIResponse {
+  features: GeoJSONFeature[]
+}
+
+interface AlgorithmItem {
+  id: number
+  name: string
+  quantity: number
+  supplier_id: number
+}
+
+async function fetchFromBackend(endpoint: string, token: string) {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/api/resource-management/${endpoint}`, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  })
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ${endpoint}: ${response.statusText}`)
+  }
+
+  return response.json()
+}
+
+export async function POST() {
+  try {
+    // Get the auth token from cookies
+    const cookieStore = await cookies()
+    const accessToken = cookieStore.get('accessToken')?.value
+
+    if (!accessToken) {
+      return NextResponse.json(
+        { success: false, error: "Authentication required" },
+        { status: 401 }
+      )
+    }
+
+    // Fetch real data from Django backend
+    const [inventoryResponse, resourcesResponse, suppliersResponse] = await Promise.all([
+      fetchFromBackend('inventory/', accessToken) as Promise<InventoryItem[]>,
+      fetchFromBackend('resources/', accessToken) as Promise<APIResponse>,
+      fetchFromBackend('suppliers/', accessToken) as Promise<APIResponse>
+    ])
+
+    // Transform inventory items to match the algorithm's expected format
+    const items: AlgorithmItem[] = inventoryResponse
+      .filter((item) => item.quantity > 0 && !item.resource && item.supplier?.id) // Only include items with supplier
+      .map((item) => ({
+        id: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        supplier_id: item.supplier!.id // We know this exists because of the filter
+      }))
+
+    // Transform resources to match the algorithm's expected format
+    const resources = resourcesResponse.features.map((feature) => ({
+      id: feature.id,
+      name: feature.properties.name,
+      capacity: feature.properties.capacity,
+      currentCount: feature.properties.current_count,
+      location: feature.properties.location ? {
+        lat: feature.properties.location.coordinates[1],
+        lng: feature.properties.location.coordinates[0]
+      } : { lat: 0, lng: 0 }
+    }))
+
+    // Transform suppliers to match the algorithm's expected format
+    const suppliers = suppliersResponse.features.map((feature) => ({
+      id: feature.id,
+      name: feature.properties.name,
+      location: feature.properties.location ? {
+        lat: feature.properties.location.coordinates[1],
+        lng: feature.properties.location.coordinates[0]
+      } : { lat: 0, lng: 0 }
+    }))
+
+    if (items.length === 0 || resources.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "No unallocated items or available resources" },
+        { status: 400 }
+      )
+    }
+
+    // Run the Hungarian algorithm
+    const allocations = runHungarianAlgorithm(items, resources, suppliers)
+
+    // Send the allocations to Django backend
+    const optimizationResponse = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:8000'}/api/resource-management/inventory/optimize-allocation/`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(allocations)
+      }
+    )
+
+    if (!optimizationResponse.ok) {
+      throw new Error('Failed to save allocations to backend')
+    }
+
+    const result = await optimizationResponse.json()
+
+    return NextResponse.json({
+      success: true,
+      allocations: result.allocations
+    })
+
+  } catch (error) {
+    console.error("Error in allocation algorithm:", error)
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: error instanceof Error ? error.message : "Failed to run allocation algorithm" 
+      }, 
+      { status: 500 }
+    )
+  }
+}
+

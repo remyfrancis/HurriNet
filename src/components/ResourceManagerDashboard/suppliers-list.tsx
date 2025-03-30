@@ -11,16 +11,19 @@ import { Search } from "lucide-react"
 type Supplier = {
   id: number
   name: string
-  supplier_type: "MEDICAL" | "FOOD" | "SHELTER" | "EQUIPMENT" | "OTHER"
-  status: "ACTIVE" | "INACTIVE" | "PENDING"
+  supplier_type: string
+  supplier_type_display: string
+  status: string
+  status_display: string
   email: string
   phone: string
   address: string
-  location: {
-    lat: number
-    lng: number
-  }
-  inventoryCount: number
+  description: string
+  contact_name: string
+  website: string
+  notes: string
+  created_at: string
+  updated_at: string
 }
 
 type SupplierListProps = {
@@ -31,68 +34,42 @@ export default function SuppliersList({ compact = false }: SupplierListProps) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [filter, setFilter] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // In a real app, fetch this data from your API
-    const mockSuppliers: Supplier[] = [
-      {
-        id: 1,
-        name: "MedSupply Co.",
-        supplier_type: "MEDICAL",
-        status: "ACTIVE",
-        email: "contact@medsupply.com",
-        phone: "555-123-4567",
-        address: "123 Health St, Medical District",
-        location: { lat: 34.0522, lng: -118.2437 },
-        inventoryCount: 42,
-      },
-      {
-        id: 2,
-        name: "FoodWorks Inc.",
-        supplier_type: "FOOD",
-        status: "ACTIVE",
-        email: "orders@foodworks.com",
-        phone: "555-987-6543",
-        address: "456 Nutrition Ave, Food District",
-        location: { lat: 34.0522, lng: -118.2437 },
-        inventoryCount: 78,
-      },
-      {
-        id: 3,
-        name: "ShelterTech",
-        supplier_type: "SHELTER",
-        status: "ACTIVE",
-        email: "info@sheltertech.com",
-        phone: "555-456-7890",
-        address: "789 Housing Blvd, Shelter Zone",
-        location: { lat: 34.0522, lng: -118.2437 },
-        inventoryCount: 23,
-      },
-      {
-        id: 4,
-        name: "EquipmentPro",
-        supplier_type: "EQUIPMENT",
-        status: "INACTIVE",
-        email: "sales@equipmentpro.com",
-        phone: "555-789-0123",
-        address: "101 Tool St, Equipment Park",
-        location: { lat: 34.0522, lng: -118.2437 },
-        inventoryCount: 56,
-      },
-      {
-        id: 5,
-        name: "GeneralSupplies",
-        supplier_type: "OTHER",
-        status: "PENDING",
-        email: "info@generalsupplies.com",
-        phone: "555-321-6547",
-        address: "202 Supply Rd, General Area",
-        location: { lat: 34.0522, lng: -118.2437 },
-        inventoryCount: 31,
-      },
-    ]
+    async function fetchSuppliers() {
+      try {
+        setLoading(true)
+        const token = localStorage.getItem('accessToken')
+        const response = await fetch('/api/resource-management/suppliers', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
 
-    setSuppliers(mockSuppliers)
+        if (!response.ok) {
+          throw new Error('Failed to fetch suppliers')
+        }
+
+        const data = await response.json()
+        // Convert GeoJSON features to supplier objects
+        const suppliersList = data.features.map((feature: any) => ({
+          id: feature.id,
+          ...feature.properties
+        }))
+        setSuppliers(suppliersList)
+        setError(null)
+      } catch (err) {
+        console.error('Error fetching suppliers:', err)
+        setError('Failed to load suppliers')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchSuppliers()
   }, [])
 
   const filteredSuppliers = suppliers.filter((supplier) => {
@@ -104,7 +81,7 @@ export default function SuppliersList({ compact = false }: SupplierListProps) {
   })
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status.toUpperCase()) {
       case "ACTIVE":
         return "bg-green-500"
       case "INACTIVE":
@@ -116,25 +93,48 @@ export default function SuppliersList({ compact = false }: SupplierListProps) {
     }
   }
 
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center min-h-[200px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-red-500 text-center">
+            <p className="font-semibold">Error</p>
+            <p className="text-sm">{error}</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   if (compact) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Suppliers</CardTitle>
-          <CardDescription>Active suppliers and their inventory</CardDescription>
+          <CardDescription>Active suppliers in the system</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {suppliers
-              .filter((s) => s.status === "ACTIVE")
+              .filter((s) => s.status.toUpperCase() === "ACTIVE")
               .slice(0, 5)
               .map((supplier) => (
                 <div key={supplier.id} className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">{supplier.name}</p>
-                    <p className="text-sm text-muted-foreground">{supplier.supplier_type}</p>
+                    <p className="text-sm text-muted-foreground">{supplier.supplier_type_display}</p>
                   </div>
-                  <Badge variant="outline">{supplier.inventoryCount} items</Badge>
+                  <Badge variant="outline">{supplier.status_display}</Badge>
                 </div>
               ))}
             <Button variant="outline" className="w-full">
@@ -195,7 +195,7 @@ export default function SuppliersList({ compact = false }: SupplierListProps) {
                 <TableHead>Type</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Contact</TableHead>
-                <TableHead>Inventory</TableHead>
+                <TableHead>Address</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -203,11 +203,11 @@ export default function SuppliersList({ compact = false }: SupplierListProps) {
               {filteredSuppliers.map((supplier) => (
                 <TableRow key={supplier.id}>
                   <TableCell className="font-medium">{supplier.name}</TableCell>
-                  <TableCell>{supplier.supplier_type}</TableCell>
+                  <TableCell>{supplier.supplier_type_display}</TableCell>
                   <TableCell>
                     <div className="flex items-center">
                       <div className={`h-2.5 w-2.5 rounded-full ${getStatusColor(supplier.status)} mr-2`}></div>
-                      {supplier.status}
+                      {supplier.status_display}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -216,10 +216,12 @@ export default function SuppliersList({ compact = false }: SupplierListProps) {
                       <div className="text-muted-foreground">{supplier.phone}</div>
                     </div>
                   </TableCell>
-                  <TableCell>{supplier.inventoryCount} items</TableCell>
+                  <TableCell className="max-w-[200px] truncate" title={supplier.address}>
+                    {supplier.address}
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button variant="outline" size="sm">
-                      View Inventory
+                      View Details
                     </Button>
                   </TableCell>
                 </TableRow>

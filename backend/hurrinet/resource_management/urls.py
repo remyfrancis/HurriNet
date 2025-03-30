@@ -33,6 +33,17 @@ urlpatterns = [
         views.InventoryItemViewSet.as_view({"get": "stock_status"}),
         name="stock-status",
     ),
+    # Explicitly register the allocation actions
+    path(
+        "inventory/allocate/",
+        views.InventoryItemViewSet.as_view({"post": "allocate"}),
+        name="inventory-allocate",
+    ),
+    # path(
+    #     "inventory/optimize-allocation/",
+    #     views.InventoryItemViewSet.as_view({"post": "optimize_allocation"}),
+    #     name="inventory-optimize-allocation",
+    # ),
     # Explicitly register the with_status action
     path(
         "inventory/with_status/",

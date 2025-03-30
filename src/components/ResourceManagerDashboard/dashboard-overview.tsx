@@ -52,7 +52,7 @@ async function fetchDashboardStats(): Promise<DashboardStats> {
       throw new Error(`Failed to fetch inventory: ${error}`)
     }
     const inventoryData = await inventoryResponse.json()
-    console.log('Raw inventory data:', inventoryData)
+    // console.log('Raw inventory data:', inventoryData)
     
     // Calculate totals from inventory data
     let totalInventory = 0
@@ -60,19 +60,19 @@ async function fetchDashboardStats(): Promise<DashboardStats> {
     
     if (Array.isArray(inventoryData)) {
       // Log each item's contribution to the totals
-      inventoryData.forEach((item: any, index: number) => {
-        console.log(`Item ${index + 1}:`, {
-          name: item.name,
-          quantity: item.quantity,
-          hasResource: !!item.resource,
-          resourceName: item.resource?.name
-        })
-      })
+      // inventoryData.forEach((item: any, index: number) => {
+      //   console.log(`Item ${index + 1}:`, {
+      //     name: item.name,
+      //     quantity: item.quantity,
+      //     hasResource: !!item.resource,
+      //     resourceName: item.resource?.name
+      //   })
+      // })
 
       // Total inventory is the sum of all items' quantities
       totalInventory = inventoryData.reduce((sum: number, item: any) => {
         const itemQuantity = item.quantity || 0
-        console.log(`Adding ${itemQuantity} to total inventory from ${item.name}`)
+        // console.log(`Adding ${itemQuantity} to total inventory from ${item.name}`)
         return sum + itemQuantity
       }, 0)
       
@@ -80,11 +80,11 @@ async function fetchDashboardStats(): Promise<DashboardStats> {
       allocatedInventory = inventoryData.reduce((sum: number, item: any) => {
         const itemQuantity = item.quantity || 0
         const isAllocated = !!item.resource
-        console.log(`${item.name}: ${isAllocated ? 'Adding' : 'Skipping'} ${itemQuantity} ${isAllocated ? 'to' : 'from'} allocated inventory`)
+        // console.log(`${item.name}: ${isAllocated ? 'Adding' : 'Skipping'} ${itemQuantity} ${isAllocated ? 'to' : 'from'} allocated inventory`)
         return sum + (item.resource ? itemQuantity : 0)
       }, 0)
       
-      console.log(`Final totals - total: ${totalInventory}, allocated: ${allocatedInventory}`)
+      // console.log(`Final totals - total: ${totalInventory}, allocated: ${allocatedInventory}`)
     }
 
     return {

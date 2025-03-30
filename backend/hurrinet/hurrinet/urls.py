@@ -84,15 +84,20 @@ router.register(r"chats/sessions", ChatSessionViewSet, basename="chat-session")
 router.register(r"chats/messages", ChatMessageViewSet, basename="chat-message")
 
 # Resource Management
-router.register(r"resource-management/resources", ResourceViewSet, basename="resource")
-router.register(r"inventory", InventoryItemViewSet, basename="inventory")
+# Commenting out registrations handled by include('resource_management.urls')
+# router.register(r"resource-management/resources", ResourceViewSet, basename="resource")
 router.register(
-    r"resource-requests", ResourceRequestViewSet, basename="resource-request"
-)
-router.register(r"resource-management/suppliers", SupplierViewSet, basename="supplier")
+    r"inventory", InventoryItemViewSet, basename="inventory"
+)  # Keep - appears registered at /api/inventory
 router.register(
-    r"resource-management/distributions", DistributionViewSet, basename="distribution"
+    r"resource-requests",
+    ResourceRequestViewSet,
+    basename="resource-request",  # Keep - appears registered at /api/resource-requests
 )
+# router.register(r"resource-management/suppliers", SupplierViewSet, basename="supplier")
+# router.register(
+#     r"resource-management/distributions", DistributionViewSet, basename="distribution"
+# )
 
 # Shelters
 router.register(r"shelters", ShelterViewSet, basename="shelter")

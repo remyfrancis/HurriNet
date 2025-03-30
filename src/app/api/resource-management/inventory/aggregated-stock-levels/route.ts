@@ -1,24 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 // Make sure the URL is correctly formatted with no trailing slash
-const BACKEND_URL = (process.env.BACKEND_URL || 'http://localhost:8000').replace(/\/$/, '');
+const BACKEND_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000').replace(/\/$/, '');
 
-// The correct API path for supplier items
-const getApiPath = (supplierId: string) => `/resource-management/suppliers/${supplierId}/items/`;
+// The correct API path for aggregated stock levels
+const API_PATH = '/resource-management/inventory/aggregated-stock-levels/';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest) {
   try {
-    // Get the supplier ID from the route parameters
-    const supplierId = params.id;
-    
     // Get the authorization header from the request
     const authHeader = request.headers.get('Authorization');
     
-    const apiUrl = `${BACKEND_URL}${getApiPath(supplierId)}`;
-    console.log(`Attempting to fetch items for supplier ${supplierId} from backend:`, apiUrl);
+    const apiUrl = `${BACKEND_URL}${API_PATH}`;
+    console.log('Attempting to fetch aggregated stock levels from backend:', apiUrl);
     
     // Forward the request to the Django backend with a timeout
     const controller = new AbortController();
@@ -35,11 +29,11 @@ export async function GET(
       
       clearTimeout(timeoutId);
       
-      console.log('Backend response status for supplier items:', response.status);
+      console.log('Backend response status:', response.status);
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Backend error response for supplier items:', errorText);
+        console.error('Backend error response:', errorText);
         return NextResponse.json(
           { error: `Backend returned error: ${response.status} ${response.statusText}`, details: errorText },
           { status: response.status }
@@ -48,7 +42,7 @@ export async function GET(
 
       // Get the response data
       const data = await response.json();
-      console.log('Successfully fetched supplier items');
+      console.log('Successfully fetched aggregated stock levels data');
       
       // Return the response
       return NextResponse.json(data, { status: response.status });
@@ -82,7 +76,7 @@ export async function GET(
     
     return NextResponse.json(
       { 
-        error: 'Failed to fetch supplier items from backend', 
+        error: 'Failed to fetch data from backend', 
         message: errorMessage,
         stack: errorStack 
       },

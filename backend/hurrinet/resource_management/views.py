@@ -202,6 +202,240 @@ class InventoryItemViewSet(viewsets.ModelViewSet):
             stock_levels = InventoryItem.get_aggregated_stock_levels()
             return Response(stock_levels)
 
+    @action(detail=False, methods=["post"])
+    def allocate(self, request):
+        """Allocate inventory items to resources"""
+        try:
+            inventory_item_id = request.data.get("inventory_item_id")
+            resource_id = request.data.get("resource_id")
+            quantity = request.data.get("quantity")
+
+            if not all([inventory_item_id, resource_id, quantity]):
+                return Response(
+                    {
+                        "error": "inventory_item_id, resource_id, and quantity are required"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            try:
+                inventory_item = InventoryItem.objects.get(id=inventory_item_id)
+                resource = Resource.objects.get(id=resource_id)
+            except (InventoryItem.DoesNotExist, Resource.DoesNotExist):
+                return Response(
+                    {"error": "Inventory item or resource not found"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            # Check if there's enough quantity available
+            if inventory_item.quantity < quantity:
+                return Response(
+                    {"error": "Not enough quantity available"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Update inventory item
+            inventory_item.quantity -= quantity
+            inventory_item.resource = resource
+            inventory_item.save()
+
+            return Response(
+                {
+                    "message": f"Successfully allocated {quantity} units to {resource.name}",
+                    "inventory_item": InventoryItemSerializer(inventory_item).data,
+                }
+            )
+
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    @action(detail=False, methods=["post"])
+    def optimize_allocation(self, request):
+        """Run Hungarian algorithm to optimize inventory allocation"""
+        try:
+            # Get data from the request body sent by Next.js
+            items_data = request.data.get("items", [])
+            resources_data = request.data.get("resources", [])
+            suppliers_data = request.data.get("suppliers", [])
+
+            # --- DEBUG LOGGING: Received data ---
+            print(
+                f"[optimize_allocation] Received Items Data ({len(items_data)}): {items_data}"
+            )
+            print(
+                f"[optimize_allocation] Received Resources Data ({len(resources_data)}): {resources_data}"
+            )
+            print(
+                f"[optimize_allocation] Received Suppliers Data ({len(suppliers_data)}): {suppliers_data}"
+            )
+            # --- END DEBUG LOGGING ---
+
+            if not items_data or not resources_data:
+                return Response(
+                    {"error": "No unallocated inventory items or resources available"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Generate cost matrix based on distances and other factors
+            cost_matrix = []
+            valid_items_indices = []  # Keep track of items that have a supplier
+            for i, item in enumerate(items_data):
+                row = []
+                supplier = next(
+                    (s for s in suppliers_data if s["id"] == item["supplier_id"]), None
+                )
+
+                # Skip item if supplier is not found, preventing infinite cost
+                if not supplier:
+                    continue
+                valid_items_indices.append(i)  # Record the index of the valid item
+
+                for resource in resources_data:
+                    # Calculate distance-based cost
+                    distance = (
+                        (supplier["location"]["lat"] - resource["location"]["lat"]) ** 2
+                        + (supplier["location"]["lng"] - resource["location"]["lng"])
+                        ** 2
+                    ) ** 0.5
+
+                    # Add capacity utilization penalty
+                    capacity_ratio = (
+                        resource["current_count"] / resource["capacity"]
+                        if resource["capacity"] > 0
+                        else 1
+                    )
+                    capacity_penalty = 50 if capacity_ratio > 0.8 else 0
+
+                    # Add quantity availability penalty
+                    quantity_penalty = 30 if item["quantity"] < 10 else 0
+
+                    cost = distance + capacity_penalty + quantity_penalty
+                    row.append(cost)
+                cost_matrix.append(row)  # Only add rows for valid items
+
+            if not cost_matrix:
+                return Response(
+                    {"error": "No valid items with suppliers found for allocation."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # Apply Hungarian algorithm
+            row_ind, col_ind = linear_sum_assignment(cost_matrix)
+
+            # Generate allocation suggestions
+            allocations = []
+            allocated_item_ids = set()
+            for i, j in zip(row_ind, col_ind):
+                # Map back to original item index using valid_items_indices
+                original_item_index = valid_items_indices[i]
+                if original_item_index < len(items_data) and j < len(resources_data):
+                    item = items_data[original_item_index]
+                    resource = resources_data[j]
+                    supplier = next(
+                        (s for s in suppliers_data if s["id"] == item["supplier_id"]),
+                        None,
+                    )
+
+                    # Ensure supplier exists (should always based on filter) and item not already allocated
+                    if supplier and item["id"] not in allocated_item_ids:
+                        # Calculate appropriate quantity to allocate (simple example: allocate all)
+                        quantity_to_allocate = item["quantity"]
+
+                        allocations.append(
+                            {
+                                "item_id": item["id"],  # Use ID for applying later
+                                "resource_id": resource[
+                                    "id"
+                                ],  # Use ID for applying later
+                                "from": supplier["name"],
+                                "to": resource["name"],
+                                "item": item["name"],
+                                "quantity": quantity_to_allocate,
+                            }
+                        )
+                        allocated_item_ids.add(item["id"])
+
+            return Response({"success": True, "allocations": allocations})
+
+        except Exception as e:
+            return Response(
+                {"success": False, "error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    @action(detail=False, methods=["post"], url_path="apply_optimization")
+    def apply_optimization(self, request):
+        """Apply the suggested allocations from the optimization algorithm"""
+        allocations = request.data.get("allocations", [])
+
+        if not allocations:
+            return Response(
+                {"success": False, "error": "No allocations provided"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        applied_count = 0
+        errors = []
+
+        for allocation in allocations:
+            try:
+                item_id = allocation.get("item_id")
+                resource_id = allocation.get("resource_id")
+
+                if not item_id or not resource_id:
+                    errors.append(
+                        f"Missing item_id or resource_id in allocation: {allocation}"
+                    )
+                    continue
+
+                # Find the item and resource
+                item = InventoryItem.objects.get(id=item_id)
+                resource = Resource.objects.get(id=resource_id)
+
+                # Check if item is already allocated
+                if item.resource is not None:
+                    errors.append(
+                        f"Item '{item.name}' (ID: {item_id}) is already allocated to {item.resource.name}."
+                    )
+                    continue
+
+                # Apply the allocation
+                item.resource = resource
+                # Optionally: Adjust resource's current_count if needed
+                # resource.current_count += item.quantity
+                # resource.save()
+                item.save()
+                applied_count += 1
+
+            except InventoryItem.DoesNotExist:
+                errors.append(f"Inventory Item with ID {item_id} not found.")
+            except Resource.DoesNotExist:
+                errors.append(f"Resource with ID {resource_id} not found.")
+            except Exception as e:
+                errors.append(
+                    f"Error applying allocation for item ID {item_id}: {str(e)}"
+                )
+
+        if errors:
+            return Response(
+                {
+                    "success": False,
+                    "message": f"Applied {applied_count} allocations with errors.",
+                    "errors": errors,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(
+            {
+                "success": True,
+                "message": f"Successfully applied {applied_count} allocations.",
+            }
+        )
+
 
 class ResourceRequestViewSet(viewsets.ModelViewSet):
     """ViewSet for managing resource requests"""

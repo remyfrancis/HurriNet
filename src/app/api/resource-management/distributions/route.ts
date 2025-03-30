@@ -39,7 +39,6 @@ export async function GET(request: NextRequest) {
 
     // Return the response data
     const data = await response.json();
-    console.log('Distributions data received from backend:', data);
     return NextResponse.json(data);
   } catch (error) {
     console.error('Error in distributions API route:', error);

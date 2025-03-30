@@ -53,94 +53,80 @@ export default function InventoryAllocation() {
   const [algorithmResults, setAlgorithmResults] = useState<
     { from: string; to: string; item: string; quantity: number }[]
   >([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // In a real app, fetch this data from your API
-    const mockInventoryItems: InventoryItem[] = [
-      {
-        id: 1,
-        name: "Bandages",
-        item_type: "MEDICAL",
-        quantity: 500,
-        unit: "box",
-        capacity: 1000,
-        supplier_id: 1,
-        supplier_name: "MedSupply Co.",
-        resource_id: null,
-        resource_name: null,
-      },
-      {
-        id: 2,
-        name: "Antibiotics",
-        item_type: "MEDICAL",
-        quantity: 200,
-        unit: "bottle",
-        capacity: 300,
-        supplier_id: 1,
-        supplier_name: "MedSupply Co.",
-        resource_id: null,
-        resource_name: null,
-      },
-      {
-        id: 3,
-        name: "Canned Food",
-        item_type: "FOOD",
-        quantity: 1000,
-        unit: "can",
-        capacity: 2000,
-        supplier_id: 2,
-        supplier_name: "FoodWorks Inc.",
-        resource_id: null,
-        resource_name: null,
-      },
-      {
-        id: 4,
-        name: "Bottled Water",
-        item_type: "WATER",
-        quantity: 500,
-        unit: "bottle",
-        capacity: 1000,
-        supplier_id: 2,
-        supplier_name: "FoodWorks Inc.",
-        resource_id: null,
-        resource_name: null,
-      },
-      {
-        id: 5,
-        name: "Tents",
-        item_type: "SHELTER",
-        quantity: 50,
-        unit: "unit",
-        capacity: 100,
-        supplier_id: 3,
-        supplier_name: "ShelterTech",
-        resource_id: null,
-        resource_name: null,
-      },
-    ]
+    async function fetchData() {
+      try {
+        setLoading(true)
+        const token = localStorage.getItem('accessToken')
+        const headers = {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
 
-    const mockSuppliers: Supplier[] = [
-      { id: 1, name: "MedSupply Co.", supplier_type: "MEDICAL" },
-      { id: 2, name: "FoodWorks Inc.", supplier_type: "FOOD" },
-      { id: 3, name: "ShelterTech", supplier_type: "SHELTER" },
-      { id: 4, name: "EquipmentPro", supplier_type: "EQUIPMENT" },
-      { id: 5, name: "GeneralSupplies", supplier_type: "OTHER" },
-    ]
+        // Fetch inventory items
+        const inventoryResponse = await fetch('/api/resource-management/inventory', { headers })
+        if (!inventoryResponse.ok) {
+          throw new Error('Failed to fetch inventory items')
+        }
+        const inventoryData = await inventoryResponse.json()
+        const formattedInventoryItems = inventoryData.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          item_type: item.item_type,
+          quantity: item.quantity,
+          unit: item.unit,
+          capacity: item.capacity,
+          supplier_id: item.supplier?.id || null,
+          supplier_name: item.supplier?.name || null,
+          resource_id: item.resource?.id || null,
+          resource_name: item.resource?.name || null
+        }))
+        setInventoryItems(formattedInventoryItems)
 
-    const mockResources: Resource[] = [
-      { id: 1, name: "Central Medical Facility", resource_type: "MEDICAL", capacity: 1000, currentCount: 750 },
-      { id: 2, name: "North Food Bank", resource_type: "SUPPLIES", capacity: 500, currentCount: 450 },
-      { id: 3, name: "East Shelter", resource_type: "SHELTER", capacity: 200, currentCount: 120 },
-      { id: 4, name: "South Water Station", resource_type: "WATER", capacity: 2000, currentCount: 1900 },
-      { id: 5, name: "West Medical Outpost", resource_type: "MEDICAL", capacity: 300, currentCount: 150 },
-    ]
+        // Fetch suppliers
+        const suppliersResponse = await fetch('/api/resource-management/suppliers', { headers })
+        if (!suppliersResponse.ok) {
+          throw new Error('Failed to fetch suppliers')
+        }
+        const suppliersData = await suppliersResponse.json()
+        const formattedSuppliers = suppliersData.features.map((feature: any) => ({
+          id: feature.id,
+          name: feature.properties.name,
+          supplier_type: feature.properties.supplier_type
+        }))
+        setSuppliers(formattedSuppliers)
 
-    setInventoryItems(mockInventoryItems)
-    setSuppliers(mockSuppliers)
-    setResources(mockResources)
+        // Fetch resources
+        const resourcesResponse = await fetch('/api/resource-management/resources', { headers })
+        if (!resourcesResponse.ok) {
+          throw new Error('Failed to fetch resources')
+        }
+        const resourcesData = await resourcesResponse.json()
+        const formattedResources = resourcesData.features.map((feature: any) => ({
+          id: feature.id,
+          name: feature.properties.name,
+          resource_type: feature.properties.resource_type,
+          capacity: feature.properties.capacity,
+          currentCount: feature.properties.current_count
+        }))
+        setResources(formattedResources)
+
+        setError(null)
+      } catch (err) {
+        console.error('Error fetching data:', err)
+        setError('Failed to load data from the server')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
   }, [])
 
-  const handleManualAllocation = () => {
+  const handleManualAllocation = async () => {
     if (!selectedSupplier || !selectedResource || !selectedItem || !quantity) {
       setAllocationResult({
         success: false,
@@ -151,105 +137,235 @@ export default function InventoryAllocation() {
 
     setIsAllocating(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      // In a real app, this would be an API call to allocate inventory
-      const updatedItems = inventoryItems.map((item) => {
-        if (item.id === Number.parseInt(selectedItem)) {
-          return {
-            ...item,
-            resource_id: Number.parseInt(selectedResource),
-            resource_name: resources.find((r) => r.id === Number.parseInt(selectedResource))?.name || null,
-            quantity: item.quantity - Number.parseInt(quantity),
-          }
-        }
-        return item
+    try {
+      const token = localStorage.getItem('accessToken')
+      const response = await fetch('/api/resource-management/inventory/allocate/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          inventory_item_id: Number.parseInt(selectedItem),
+          resource_id: Number.parseInt(selectedResource),
+          quantity: Number.parseInt(quantity)
+        })
       })
 
-      setInventoryItems(updatedItems)
-      setIsAllocating(false)
+      if (!response.ok) {
+        const errorText = await response.text()
+        let errorMessage = 'Failed to allocate inventory'
+        try {
+          const errorData = JSON.parse(errorText)
+          errorMessage = errorData.error || errorMessage
+        } catch (e) {
+          console.error('Error parsing error response:', errorText)
+        }
+        throw new Error(errorMessage)
+      }
+
+      const result = await response.json()
+
+      // Refresh inventory data after allocation
+      const inventoryResponse = await fetch('/api/resource-management/inventory/', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (!inventoryResponse.ok) {
+        throw new Error('Failed to refresh inventory data')
+      }
+
+      const inventoryData = await inventoryResponse.json()
+      const formattedInventoryItems = inventoryData.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        item_type: item.item_type,
+        quantity: item.quantity,
+        unit: item.unit,
+        capacity: item.capacity,
+        supplier_id: item.supplier?.id || null,
+        supplier_name: item.supplier?.name || null,
+        resource_id: item.resource?.id || null,
+        resource_name: item.resource?.name || null
+      }))
+      
+      setInventoryItems(formattedInventoryItems)
       setAllocationResult({
         success: true,
-        message: `Successfully allocated ${quantity} units to ${resources.find((r) => r.id === Number.parseInt(selectedResource))?.name}`,
+        message: result.message
       })
 
       // Reset form
       setSelectedItem("")
       setQuantity("1")
-    }, 1500)
+    } catch (err) {
+      console.error('Error allocating inventory:', err)
+      setAllocationResult({
+        success: false,
+        message: err instanceof Error ? err.message : 'Failed to allocate inventory'
+      })
+    } finally {
+      setIsAllocating(false)
+    }
   }
 
-  const runHungarianAlgorithm = () => {
+  const runHungarianAlgorithm = async () => {
     setIsRunningAlgorithm(true)
     setAlgorithmResults([])
+    setAllocationResult(null)
 
-    // Simulate running the Hungarian algorithm
-    setTimeout(() => {
-      // In a real app, this would be an API call to run the algorithm
-      // The Hungarian algorithm would optimize the allocation of inventory items to resources
-      // based on various factors like distance, resource needs, etc.
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        throw new Error('Authentication required. Please log in.')
+      }
 
-      const mockResults = [
-        {
-          from: "MedSupply Co.",
-          to: "Central Medical Facility",
-          item: "Bandages",
-          quantity: 200,
-        },
-        {
-          from: "MedSupply Co.",
-          to: "West Medical Outpost",
-          item: "Antibiotics",
-          quantity: 50,
-        },
-        {
-          from: "FoodWorks Inc.",
-          to: "North Food Bank",
-          item: "Canned Food",
-          quantity: 300,
-        },
-        {
-          from: "FoodWorks Inc.",
-          to: "South Water Station",
-          item: "Bottled Water",
-          quantity: 100,
-        },
-        {
-          from: "ShelterTech",
-          to: "East Shelter",
-          item: "Tents",
-          quantity: 20,
-        },
-      ]
-
-      setAlgorithmResults(mockResults)
-      setIsRunningAlgorithm(false)
-
-      // Update inventory items to reflect the allocations
-      const updatedItems = [...inventoryItems]
-      mockResults.forEach((result) => {
-        const itemIndex = updatedItems.findIndex((item) => item.name === result.item)
-        if (itemIndex !== -1) {
-          const resourceId = resources.find((r) => r.name === result.to)?.id || null
-          updatedItems[itemIndex] = {
-            ...updatedItems[itemIndex],
-            quantity: updatedItems[itemIndex].quantity - result.quantity,
-            resource_id: resourceId,
-            resource_name: result.to,
-          }
+      const response = await fetch('/api/resource-management/inventory/optimize_allocation', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       })
 
-      setInventoryItems(updatedItems)
-    }, 3000)
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null)
+        throw new Error(errorData?.error || `Failed to run optimization algorithm: ${response.statusText}`)
+      }
+
+      const results = await response.json()
+      if (results.success === false) {
+        throw new Error(results.error || 'Failed to run optimization algorithm')
+      }
+      
+      setAlgorithmResults(results.allocations || [])
+      setAllocationResult({
+        success: true,
+        message: 'Successfully generated allocation recommendations'
+      })
+
+      // Update inventory items to reflect the suggested allocations
+      const inventoryResponse = await fetch('/api/resource-management/inventory', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (!inventoryResponse.ok) {
+        throw new Error('Failed to refresh inventory data')
+      }
+
+      const inventoryData = await inventoryResponse.json()
+      const formattedInventoryItems = inventoryData.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        item_type: item.item_type,
+        quantity: item.quantity,
+        unit: item.unit,
+        capacity: item.capacity,
+        supplier_id: item.supplier?.id || null,
+        supplier_name: item.supplier?.name || null,
+        resource_id: item.resource?.id || null,
+        resource_name: item.resource?.name || null
+      }))
+      
+      setInventoryItems(formattedInventoryItems)
+    } catch (err) {
+      console.error('Error running optimization algorithm:', err)
+      setAllocationResult({
+        success: false,
+        message: err instanceof Error ? err.message : 'Failed to run optimization algorithm'
+      })
+      setAlgorithmResults([])
+    } finally {
+      setIsRunningAlgorithm(false)
+    }
   }
 
-  const applyAlgorithmResults = () => {
-    setAllocationResult({
-      success: true,
-      message: "Successfully applied automated allocations",
-    })
-    setAlgorithmResults([])
+  const applyAlgorithmResults = async () => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      const response = await fetch('/api/resource-management/inventory/apply-optimization/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          allocations: algorithmResults
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to apply optimized allocations')
+      }
+
+      // Refresh inventory data
+      const inventoryResponse = await fetch('/api/resource-management/inventory', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (!inventoryResponse.ok) {
+        throw new Error('Failed to refresh inventory data')
+      }
+
+      const inventoryData = await inventoryResponse.json()
+      const formattedInventoryItems = inventoryData.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        item_type: item.item_type,
+        quantity: item.quantity,
+        unit: item.unit,
+        capacity: item.capacity,
+        supplier_id: item.supplier?.id || null,
+        supplier_name: item.supplier?.name || null,
+        resource_id: item.resource?.id || null,
+        resource_name: item.resource?.name || null
+      }))
+      
+      setInventoryItems(formattedInventoryItems)
+      setAllocationResult({
+        success: true,
+        message: "Successfully applied automated allocations"
+      })
+      setAlgorithmResults([])
+    } catch (err) {
+      console.error('Error applying optimized allocations:', err)
+      setAllocationResult({
+        success: false,
+        message: 'Failed to apply optimized allocations'
+      })
+    }
+  }
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center min-h-[200px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-red-500 text-center">
+            <p className="font-semibold">Error</p>
+            <p className="text-sm">{error}</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
