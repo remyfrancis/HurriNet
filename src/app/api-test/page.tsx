@@ -34,7 +34,7 @@ export default function ApiTestPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/resource_management/inventory/with_status');
+      const response = await fetch('/api/resource-management/inventory/with_status');
       
       if (!response.ok) {
         throw new Error(`Inventory API test failed with status: ${response.status}`);

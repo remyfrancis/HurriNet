@@ -134,7 +134,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Emergency Action Buttons */}
-          <div className="grid gap-4 grid-cols-1 md:grid-cols-4">
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
             <Button className="bg-red-600 hover:bg-red-700">
               <Phone className="mr-2 h-4 w-4" /> Live Emergency Broadcasts
             </Button>
@@ -143,9 +143,6 @@ export default function AdminDashboard() {
             </Button>
             <Button className="bg-blue-600 hover:bg-blue-700">
               <Users className="mr-2 h-4 w-4" /> Deploy Response Teams
-            </Button>
-            <Button className="bg-purple-600 hover:bg-purple-700">
-              <Radio className="mr-2 h-4 w-4" /> Emergency SMS Alerts
             </Button>
           </div>
 
@@ -169,7 +166,7 @@ export default function AdminDashboard() {
                 </Card>
                 <Card className="lg:col-span-2">
                   <CardHeader>
-                    <CardTitle>Active Warnings</CardTitle>
+                    <CardTitle>Weather Alerts</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <WarningsList />

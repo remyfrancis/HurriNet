@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const BACKEND_URL = (process.env.BACKEND_URL || 'http://localhost:8000').replace(/\/$/, '');
 
 // The correct API path for the test endpoint
-const API_PATH = '/resource_management/test/';
+const API_PATH = '/resource-management/test/';
 
 export async function GET(request: NextRequest) {
   try {

@@ -60,8 +60,19 @@ class ResourceSerializer(GeoFeatureModelSerializer):
 class InventoryItemSerializer(serializers.ModelSerializer):
     """Serializer for inventory items"""
 
-    resource = ResourceMinimalSerializer()
-    supplier = SupplierMinimalSerializer()
+    resource = ResourceMinimalSerializer(read_only=True, required=False)
+    supplier = SupplierMinimalSerializer(read_only=True, required=False)
+
+    resource_id = serializers.PrimaryKeyRelatedField(
+        queryset=Resource.objects.all(), source="resource", write_only=True
+    )
+    supplier_id = serializers.PrimaryKeyRelatedField(
+        queryset=Supplier.objects.all(),
+        source="supplier",
+        write_only=True,
+        allow_null=True,
+    )
+
     resource_name = serializers.CharField(source="resource.name", read_only=True)
     item_type_display = serializers.CharField(
         source="get_item_type_display", read_only=True
@@ -80,6 +91,8 @@ class InventoryItemSerializer(serializers.ModelSerializer):
             "resource",
             "resource_name",
             "supplier",
+            "resource_id",
+            "supplier_id",
         ]
 
 
@@ -146,6 +159,7 @@ class SupplierSerializer(GeoFeatureModelSerializer):
 
     supplier_type_display = serializers.CharField(source="get_supplier_type_display")
     status_display = serializers.CharField(source="get_status_display")
+    location = serializers.SerializerMethodField()
 
     class Meta:
         model = Supplier
@@ -167,6 +181,11 @@ class SupplierSerializer(GeoFeatureModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+    def get_location(self, obj):
+        if obj.location:
+            return [obj.location.x, obj.location.y]  # Returns [longitude, latitude]
+        return None
 
 
 class StockLevelSerializer(serializers.Serializer):

@@ -53,11 +53,11 @@ interface InventoryItem {
   quantity: number;
   capacity: number;
   unit: string;
-  resource: number | string;  // Can be either a number (ID) or string (URL)
+  resource: { id: number; name: string } | null; // Updated resource type
   resource_name: string;
   status: string;
   last_updated: string;
-  supplier_id: number;
+  supplier: { id: number; name: string } | null; // Updated supplier type
 }
 
 // Define the resource type
@@ -98,8 +98,8 @@ export default function InventoryPage() {
     quantity: 0,
     capacity: 0,
     unit: '',
-    resource: '',
-    supplier: ''
+    resourceId: '', // Use resourceId for clarity
+    supplierId: ''  // Use supplierId for clarity
   })
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -113,7 +113,7 @@ export default function InventoryPage() {
         throw new Error('No authentication token found')
       }
       
-      const response = await fetch('/api/resource_management/resources/', {
+      const response = await fetch('/api/resource-management/resources/', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -161,7 +161,7 @@ export default function InventoryPage() {
       }
       
       // Build the API URL with filters if needed
-      let url = '/api/resource_management/inventory/with_status/'
+      let url = '/api/resource-management/inventory/with_status/'
       const params = new URLSearchParams()
       
       if (statusFilter && statusFilter !== 'all') {
@@ -201,50 +201,9 @@ export default function InventoryPage() {
     } catch (err) {
       console.error('Error fetching inventory data:', err)
       setError(err instanceof Error ? err.message : 'An unknown error occurred')
-      // Use mock data as fallback if API fails
-      const mockData = [
-        { 
-          id: 1, 
-          name: 'Bottled Water', 
-          quantity: 750, 
-          capacity: 1000, 
-          unit: 'bottles', 
-          resource: 1,
-          resource_name: 'Castries Water Distribution Center',
-          status: 'Sufficient',
-          last_updated: '2023-06-20',
-          supplier_id: 1
-        },
-        { 
-          id: 2, 
-          name: 'Non-perishable Food', 
-          quantity: 300, 
-          capacity: 500, 
-          unit: 'kg', 
-          resource: 2,
-          resource_name: 'Gros Islet Supply Depot',
-          status: 'Moderate',
-          last_updated: '2023-06-18',
-          supplier_id: 2
-        },
-        { 
-          id: 3, 
-          name: 'Medical Supplies', 
-          quantity: 120, 
-          capacity: 300, 
-          unit: 'kits', 
-          resource: 3,
-          resource_name: 'Soufrière Medical Center',
-          status: 'Low',
-          last_updated: '2023-06-15',
-          supplier_id: 3
-        },
-      ]
-      setInventoryItems(mockData)
-      
-      // Extract unique locations for the location filter from mock data
-      const locations = [...new Set(mockData.map(item => item.resource_name))].sort()
-      setUniqueLocations(locations)
+      // Clear items and locations on error instead of using mock data
+      setInventoryItems([])
+      setUniqueLocations([])
     } finally {
       setLoading(false)
     }
@@ -293,7 +252,7 @@ export default function InventoryPage() {
       }
       
       // Send data to API
-      const response = await fetch('/api/resource_management/inventory/', {
+      const response = await fetch('/api/resource-management/inventory/', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -357,8 +316,8 @@ export default function InventoryPage() {
         throw new Error('No authentication token found')
       }
       
-      // Send delete request to API
-      const response = await fetch(`/api/resource_management/inventory/inventory/${itemToDelete.id}`, {
+      // Send delete request to API - Corrected URL
+      const response = await fetch(`/api/resource-management/inventory/${itemToDelete.id}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -399,8 +358,9 @@ export default function InventoryPage() {
       quantity: item.quantity,
       capacity: item.capacity,
       unit: item.unit,
-      resource: item.resource.toString(),
-      supplier: item.supplier_id.toString()
+      // Read ID from nested objects, handle null cases
+      resourceId: item.resource ? item.resource.id.toString() : '', 
+      supplierId: item.supplier ? item.supplier.id.toString() : '' 
     })
     setIsUpdateDialogOpen(true)
   }
@@ -418,7 +378,7 @@ export default function InventoryPage() {
   const handleUpdateResourceChange = (value: string) => {
     setUpdateItem(prev => ({
       ...prev,
-      resource: value
+      resourceId: value // Update resourceId
     }))
   }
 
@@ -430,8 +390,8 @@ export default function InventoryPage() {
     setIsSubmitting(true)
     
     try {
-      // Validate form - including supplier now
-      if (!updateItem.name || !updateItem.unit || !updateItem.resource || !updateItem.supplier || updateItem.quantity < 0 || updateItem.capacity <= 0) {
+      // Validate form - using updated state names
+      if (!updateItem.name || !updateItem.unit || !updateItem.resourceId || !updateItem.supplierId || updateItem.quantity < 0 || updateItem.capacity <= 0) {
         throw new Error('Please fill in all required fields with valid values (Quantity >= 0, Capacity > 0)')
       }
       
@@ -440,23 +400,23 @@ export default function InventoryPage() {
         throw new Error('No authentication token found')
       }
       
-      // Prepare data for API
+      // Prepare data for API - using updated field names for backend
       const itemData = {
         name: updateItem.name,
         quantity: updateItem.quantity,
         capacity: updateItem.capacity,
         unit: updateItem.unit,
-        resource: parseInt(updateItem.resource, 10),
-        supplier: parseInt(updateItem.supplier, 10)
+        resource_id: parseInt(updateItem.resourceId, 10), // Use resource_id
+        supplier_id: parseInt(updateItem.supplierId, 10)  // Use supplier_id
       }
 
       // Basic validation check
-       if (isNaN(itemData.resource) || isNaN(itemData.supplier)) {
+       if (isNaN(itemData.resource_id) || isNaN(itemData.supplier_id)) { // Check new field names
          throw new Error("Invalid Resource or Supplier ID selected.");
        }
       
-      // Send data to API
-      const response = await fetch(`/api/resource_management/inventory/inventory/${itemToUpdate.id}/`, {
+      // Send data to API - Corrected URL
+      const response = await fetch(`/api/resource-management/inventory/${itemToUpdate.id}/`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1048,7 +1008,7 @@ export default function InventoryPage() {
                   Resource
                 </Label>
                 <Select 
-                  value={updateItem.resource} 
+                  value={updateItem.resourceId}
                   onValueChange={handleUpdateResourceChange}
                 >
                   <SelectTrigger className="col-span-3">

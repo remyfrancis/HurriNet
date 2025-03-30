@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 const BACKEND_URL = (process.env.BACKEND_URL || 'http://localhost:8000').replace(/\/$/, '');
 
 // The correct API path for suppliers
-const API_PATH = '/resource_management/suppliers/';
+const API_PATH = '/resource-management/suppliers/';
 
 export async function GET(request: NextRequest) {
   try {

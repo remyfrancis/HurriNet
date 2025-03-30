@@ -32,11 +32,6 @@ const navItems = [
     icon: Bell,
   },
   {
-    title: 'Map',
-    href: '/admin-dashboard/map',
-    icon: Map,
-  },
-  {
     title: 'Emergency Teams',
     href: '/admin-dashboard/teams',
     icon: Users,
@@ -45,21 +40,6 @@ const navItems = [
     title: 'Resources',
     href: '/admin-dashboard/resources',
     icon: Shield,
-  },
-  {
-    title: 'Analytics',
-    href: '/admin-dashboard/analytics',
-    icon: BarChart,
-  },
-  {
-    title: 'Broadcasts',
-    href: '/admin-dashboard/broadcasts',
-    icon: Radio,
-  },
-  {
-    title: 'Support',
-    href: '/admin-dashboard/support',
-    icon: LifeBuoy,
   },
   {
     title: 'Chat',

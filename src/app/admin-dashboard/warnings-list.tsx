@@ -14,41 +14,6 @@ interface Warning {
   timestamp: string
 }
 
-const mockWarnings: Warning[] = [
-  {
-    id: '1',
-    title: 'Hurricane Warning',
-    type: 'weather',
-    severity: 'high',
-    location: 'Castries',
-    timestamp: '2024-03-31T10:00:00Z',
-  },
-  {
-    id: '2',
-    title: 'Flood Alert',
-    type: 'weather',
-    severity: 'high',
-    location: 'Gros Islet',
-    timestamp: '2024-03-31T09:45:00Z',
-  },
-  {
-    id: '3',
-    title: 'Wind Advisory',
-    type: 'weather',
-    severity: 'medium',
-    location: 'Vieux Fort',
-    timestamp: '2024-03-31T09:30:00Z',
-  },
-  {
-    id: '4',
-    title: 'Storm Surge Warning',
-    type: 'weather',
-    severity: 'high',
-    location: 'Soufriere',
-    timestamp: '2024-03-31T09:15:00Z',
-  },
-]
-
 const getSeverityColor = (severity: Warning['severity']) => {
   switch (severity) {
     case 'high':
@@ -63,11 +28,46 @@ const getSeverityColor = (severity: Warning['severity']) => {
 }
 
 export function WarningsList() {
-  const [warnings, setWarnings] = useState<Warning[]>(mockWarnings)
+  const [warnings, setWarnings] = useState<Warning[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    // TODO: Fetch real warnings data from the API
+    const fetchWarnings = async () => {
+      setIsLoading(true)
+      setError(null)
+      try {
+        const response = await fetch('/api/weather/alerts/', { credentials: 'include' })
+        if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+             throw new Error('Authentication failed. Please log in.')
+          }
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        const data: Warning[] = await response.json()
+        setWarnings(data)
+      } catch (e: any) {
+        console.error("Failed to fetch warnings:", e)
+        setError("Failed to load warnings. Please try again later.")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchWarnings()
   }, [])
+
+  if (isLoading) {
+    return <div>Loading warnings...</div>
+  }
+
+  if (error) {
+    return <div className="text-red-500">{error}</div>
+  }
+
+  if (warnings.length === 0) {
+    return <div>No warnings found.</div>
+  }
 
   return (
     <ScrollArea className="h-[400px] pr-4">

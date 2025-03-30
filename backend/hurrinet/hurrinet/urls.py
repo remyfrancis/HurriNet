@@ -89,11 +89,11 @@ router.register(r"chats/messages", ChatMessageViewSet, basename="chat-message")
 # router.register(
 #     r"inventory", InventoryItemViewSet, basename="inventory"
 # )  # Remove: Should be handled by resource_management.urls
-router.register(
-    r"resource-requests",
-    ResourceRequestViewSet,
-    basename="resource-request",  # Keep - appears registered at /api/resource-requests
-)
+# router.register(
+#     r"resource-requests",
+#     ResourceRequestViewSet,
+#     basename="resource-request",  # Remove: Should be handled by resource_management.urls
+# )
 # router.register(r"resource-management/suppliers", SupplierViewSet, basename="supplier")
 # router.register(
 #     r"resource-management/distributions", DistributionViewSet, basename="distribution"
@@ -131,7 +131,6 @@ urlpatterns = (
                     path("alerts/", include("alerts.urls")),
                     path("chats/", include("chats.urls")),
                     path("resource-management/", include("resource_management.urls")),
-                    path("resource_management/inventory/", include("resource_management.urls")),
                     path("shelters/", include("shelters.urls")),
                     path("social/", include("social.urls")),
                     path("medical/", include("medical.urls")),
