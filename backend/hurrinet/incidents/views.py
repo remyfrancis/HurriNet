@@ -7,7 +7,7 @@ This module provides views for managing incidents, updates, and flags.
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.utils import timezone
 from django.db.models import Q
 from django.contrib.gis.geos import Point
@@ -58,8 +58,8 @@ class IncidentViewSet(viewsets.ModelViewSet):
 
     queryset = Incident.objects.all()
     serializer_class = IncidentSerializer
-    permission_classes = [permissions.IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
+    permission_classes = [permissions.IsAuthenticated, IsReporterOrReadOnly]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
     filterset_fields = [
         "incident_type",
         "severity",
@@ -114,24 +114,6 @@ class IncidentViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(incident)
         return Response(serializer.data)
 
-    @action(detail=True, methods=["post"], permission_classes=[CanVerifyIncidents])
-    def verify(self, request, pk=None):
-        """Verify an incident."""
-        incident = self.get_object()
-
-        if incident.verified_by:
-            return Response(
-                {"error": "Incident is already verified"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        incident.verified_by = request.user
-        incident.status = "VERIFIED"
-        incident.save()
-
-        serializer = self.get_serializer(incident)
-        return Response(serializer.data)
-
     @action(detail=True, methods=["post"], permission_classes=[CanAssignIncidents])
     def assign(self, request, pk=None):
         """Assign an incident to a user."""
@@ -154,8 +136,6 @@ class IncidentViewSet(viewsets.ModelViewSet):
             )
 
         incident.assigned_to = assignee
-        if incident.status == "REPORTED":
-            incident.status = "IN_PROGRESS"
         incident.save()
 
         serializer = self.get_serializer(incident)
@@ -238,6 +218,7 @@ class IncidentViewSet(viewsets.ModelViewSet):
 
         incident.is_resolved = True
         incident.resolved_by = request.user
+        incident.resolved_at = timezone.now()
         incident.save()
 
         # Invalidate caches
@@ -269,69 +250,6 @@ class IncidentViewSet(viewsets.ModelViewSet):
             )
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    def create(self, request, *args, **kwargs):
-        """Create a new incident and invalidate cache."""
-        # Log authentication status
-        print(f"User authentication status: {request.user.is_authenticated}")
-        if request.user.is_authenticated:
-            print(f"Authenticated user: {request.user.email} (ID: {request.user.id})")
-        else:
-            print("Warning: User is not authenticated!")
-
-        # Log request information
-        print(f"Request content type: {request.content_type}")
-        print(f"Request headers: {dict(request.headers)}")
-        print(
-            f"Request data keys: {request.data.keys() if hasattr(request.data, 'keys') else 'No keys available'}"
-        )
-
-        # Handle multipart form data with photo
-        if request.content_type and request.content_type.startswith(
-            "multipart/form-data"
-        ):
-            try:
-                # If 'data' field exists, it contains the GeoJSON data
-                if "data" in request.data:
-                    import json
-
-                    # Parse the GeoJSON data
-                    geojson_data = json.loads(request.data["data"])
-
-                    # Extract properties and geometry
-                    properties = geojson_data.get("properties", {})
-                    geometry = geojson_data.get("geometry", {})
-
-                    # Create a new data dict with the properties
-                    data = {
-                        "title": properties.get("title"),
-                        "description": properties.get("description"),
-                        "incident_type": properties.get("incident_type"),
-                        "severity": properties.get("severity"),
-                    }
-
-                    # Add the photo if it exists
-                    if "photo" in request.FILES:
-                        data["photo"] = request.FILES["photo"]
-
-                    # Create a Point object from the coordinates
-                    if geometry and geometry.get("type") == "Point":
-                        coords = geometry.get("coordinates", [])
-                        if len(coords) == 2:
-                            # Create a Point object instead of a GeoJSON dict
-                            data["location"] = Point(coords[0], coords[1], srid=4326)
-
-                    # Update the request data
-                    request._full_data = data
-            except Exception as e:
-                return Response(
-                    {"detail": f"Error processing multipart data: {str(e)}"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-        response = super().create(request, *args, **kwargs)
-        clear_pattern("incidents:*")
-        return response
 
     def update(self, request, *args, **kwargs):
         """Update incident and invalidate cache."""

@@ -19,7 +19,7 @@ class IsReporterOrReadOnly(permissions.BasePermission):
             return True
 
         # Write permissions are only allowed to the reporter of the incident
-        return obj.reported_by == request.user
+        return obj.created_by == request.user
 
 
 class CanVerifyIncidents(permissions.BasePermission):
