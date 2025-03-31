@@ -425,12 +425,6 @@ export default function LandingPage() {
             <Link href="https://github.com/remyfrancis/HurriNet" className="text-sm text-muted-foreground hover:text-foreground">
               Project GitHub
             </Link>
-            <Link href="/privacy-policy" className="text-sm text-muted-foreground hover:text-foreground">
-              Privacy Policy
-            </Link>
-            <Link href="/user-documentation" className="text-sm text-muted-foreground hover:text-foreground">
-              User Documentation
-            </Link>
             <Link href="/final-report.pdf" className="text-sm text-muted-foreground hover:text-foreground">
               Final Report
             </Link>

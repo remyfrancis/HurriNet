@@ -203,6 +203,55 @@ Before you begin, ensure you have the following installed on your local machine:
     ```
     Follow the prompts.
 
+    This directory contains the Django backend for the HurriNet application.
+
+
+## Generating Test Data
+
+The project includes scripts to populate the database with realistic test data for development and testing purposes.
+
+**IMPORTANT:** You must create the test users first before generating other data that might depend on them.
+
+### Create Test Users
+
+To create a standard set of test users for each role (Administrator, Citizen, Emergency Personnel, Resource Manager, Medical Personnel), run the following Django management command from the `HurriNet/backend/` directory (where `manage.py` is located):
+
+```bash
+python manage.py create_test_users
+```
+
+This command will create the users if they don't already exist and print their credentials to the console.
+
+**Test User Credentials:**
+
+*   **ADMINISTRATOR:**
+    *   Email: `admin@hurrinet.org`
+    *   Password: `Admin123!`
+*   **CITIZEN:**
+    *   Email: `citizen@hurrinet.org`
+    *   Password: `Citizen123!`
+*   **EMERGENCY\_PERSONNEL:**
+    *   Email: `emergency@hurrinet.org`
+    *   Password: `Emergency123!`
+*   **RESOURCE\_MANAGER:**
+    *   Email: `resource@hurrinet.org`
+    *   Password: `Resource123!`
+*   **MEDICAL\_PERSONNEL:**
+    *   Email: `medical@hurrinet.org`
+    *   Password: `Medical123!`
+
+### Generate All Other Test Data
+
+After creating the test users, you can generate test data for alerts, feeds, medical records, etc., by running the main generation script from the `HurriNet/backend/` directory:
+
+```bash
+python generate_all_test_data.py
+```
+
+This script will call the individual generation scripts (`generate_test_alerts.py`, `generate_test_feeds.py`, `generate_test_medical.py`, etc.) to populate the database.
+
+**Note:** You can also run the individual `generate_test_*.py` scripts if you only need specific types of data.
+
 ## Running the Application
 
 You need to run the Django application server and the Celery worker (since Celery is in requirements).
