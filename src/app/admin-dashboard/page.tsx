@@ -65,13 +65,6 @@ export default function AdminDashboard() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col">
-        {/* Alert Banner */}
-        <Alert variant="destructive" className="rounded-none border-b">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Hurricane Warning in effect for Saint Lucia. Category 2 hurricane approaching from the southeast.
-          </AlertDescription>
-        </Alert>
 
         <div className="flex-1 space-y-4 p-4 md:p-8">
           <div className="flex items-center justify-between">

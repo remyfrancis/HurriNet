@@ -50,11 +50,6 @@ const navItems = [
     title: 'Chat',
     href: '/chat',
     icon: MessageCircle,
-  },
-  {
-    title: 'System Performance',
-    href: '/admin-dashboard/system-performance',
-    icon: Activity,
   }
 ]
 
