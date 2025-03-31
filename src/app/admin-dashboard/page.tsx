@@ -12,7 +12,6 @@ import { AdminNav } from "./admin-nav"
 import { WeatherForecast } from "./weather-forecast"
 import { WarningsList } from "./warnings-list"
 import Link from 'next/link'
-import { TeamsManagement } from './teams-management'
 
 // Dynamically import the ShelterMapFullpage component
 const ShelterMapFullpage = dynamic(() => 
@@ -143,7 +142,10 @@ export default function AdminDashboard() {
             <Button className="bg-orange-600 hover:bg-orange-700">
               <Shield className="mr-2 h-4 w-4" /> Activate Shelters
             </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700">
+            <Button
+              className="bg-blue-600 hover:bg-blue-700"
+              onClick={() => router.push('/admin-dashboard/teams')}
+            >
               <Users className="mr-2 h-4 w-4" /> Deploy Response Teams
             </Button>
           </div>
@@ -154,7 +156,6 @@ export default function AdminDashboard() {
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="warnings">Warnings</TabsTrigger>
               <TabsTrigger value="resources">Resources</TabsTrigger>
-              <TabsTrigger value="teams">Teams</TabsTrigger>
             </TabsList>
             <TabsContent value="overview" className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
@@ -187,9 +188,6 @@ export default function AdminDashboard() {
                 <CardHeader><CardTitle>Resource Management</CardTitle></CardHeader>
                 <CardContent>Manage shelters, medical facilities, equipment, etc.</CardContent>
               </Card>
-            </TabsContent>
-            <TabsContent value="teams" className="space-y-4">
-              <TeamsManagement />
             </TabsContent>
           </Tabs>
 

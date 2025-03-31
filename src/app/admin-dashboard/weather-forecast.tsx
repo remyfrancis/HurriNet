@@ -47,7 +47,7 @@ export function WeatherForecast() {
 
         const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/weather/forecast/`, {
           headers: {
-            'Authorization': token,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         })
