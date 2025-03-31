@@ -12,9 +12,11 @@ import { AdminNav } from "./admin-nav"
 import { WeatherForecast } from "./weather-forecast"
 import { WarningsList } from "./warnings-list"
 import Link from 'next/link'
+import { TeamsManagement } from './teams-management'
 
-// Dynamically import the Map component to avoid SSR issues
-const Map = dynamic(() => import("./map"), {
+// Dynamically import the ShelterMapFullpage component
+const ShelterMapFullpage = dynamic(() => 
+  import('../citizen-dashboard/shelter-map-fullpage').then(mod => mod.ShelterMapFullpage), {
   ssr: false,
   loading: () => <div className="w-full h-[500px] bg-muted flex items-center justify-center">Loading map...</div>,
 })
@@ -160,8 +162,8 @@ export default function AdminDashboard() {
                   <CardHeader>
                     <CardTitle>Situation Map</CardTitle>
                   </CardHeader>
-                  <CardContent className="pl-2">
-                    <Map />
+                  <CardContent className="pl-2 h-[500px]">
+                    <ShelterMapFullpage />
                   </CardContent>
                 </Card>
                 <Card className="lg:col-span-2">
@@ -173,6 +175,21 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
               </div>
+            </TabsContent>
+            <TabsContent value="warnings" className="space-y-4">
+              <Card>
+                <CardHeader><CardTitle>Detailed Warnings</CardTitle></CardHeader>
+                <CardContent>Manage and view detailed warnings here.</CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="resources" className="space-y-4">
+              <Card>
+                <CardHeader><CardTitle>Resource Management</CardTitle></CardHeader>
+                <CardContent>Manage shelters, medical facilities, equipment, etc.</CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="teams" className="space-y-4">
+              <TeamsManagement />
             </TabsContent>
           </Tabs>
 

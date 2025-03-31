@@ -20,6 +20,11 @@ import {
   LogOut,
 } from 'lucide-react'
 
+// Define props interface
+interface AdminNavProps {
+  className?: string;
+}
+
 const navItems = [
   {
     title: 'Overview',
@@ -53,7 +58,8 @@ const navItems = [
   }
 ]
 
-export function AdminNav() {
+// Update function signature to accept props
+export function AdminNav({ className }: AdminNavProps) {
   const pathname = usePathname()
 
   const handleLogout = () => {
@@ -62,7 +68,8 @@ export function AdminNav() {
   }
 
   return (
-    <div className="w-64 min-h-screen bg-background border-r">
+    // Apply className to the outermost div using cn for merging
+    <div className={cn("w-64 min-h-screen bg-background border-r", className)}>
       <div className="p-6">
         <h1 className="text-xl font-bold">HurriNet</h1>
         <p className="text-sm text-muted-foreground">Admin Portal</p>
