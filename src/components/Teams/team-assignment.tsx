@@ -39,6 +39,7 @@ interface Incident {
   description: string;
   latitude: number;
   longitude: number;
+  location_name?: string | null;
   severity: 'LOW' | 'MODERATE' | 'HIGH' | 'EXTREME';
   created_at: string;
   type: 'incident'; // Keep type for consistency if needed
@@ -92,6 +93,7 @@ export default function TeamAssignment() {
           });
           if (!incidentResponse.ok) throw new Error(`Failed to fetch incidents: ${incidentResponse.statusText}`);
           const incidentData = await incidentResponse.json();
+          console.log("Raw Incident API Data:", incidentData); // <--- Log 1: Raw API data
           
           let fetchedIncidents: Incident[] = [];
           const defaultCoords = { latitude: 13.9094, longitude: -60.9789 }; // Saint Lucia Center
@@ -126,6 +128,7 @@ export default function TeamAssignment() {
                           description: feature.properties?.description || 'No description',
                           latitude,
                           longitude,
+                          location_name: feature.properties?.location_name,
                           severity: feature.properties?.severity || 'MODERATE',
                           created_at: feature.properties?.created_at || new Date().toISOString(),
                           type: 'incident' as const,
@@ -134,9 +137,15 @@ export default function TeamAssignment() {
           // Add handling for other potential incidentData structures if necessary (Array, Paginated Results)
           } else {
                console.warn("Incidents data format not recognized as GeoJSON FeatureCollection. Attempting fallback.");
-              // Add fallback logic here if needed, similar to above map but checking incident properties directly
+              // Adapt fallback logic if needed to include location_name
+              if (Array.isArray(incidentData)) {
+                  fetchedIncidents = incidentData.filter((inc: any) => !inc.is_resolved).map((inc: any) => ({ ...inc, title: inc.title, type: 'incident' as const })); // Add mapping if needed
+              } else if (incidentData.results) {
+                  fetchedIncidents = incidentData.results.filter((inc: any) => !inc.is_resolved).map((inc: any) => ({ ...inc, title: inc.title, type: 'incident' as const })); // Add mapping if needed
+              }
           }
           setIncidents(fetchedIncidents);
+          console.log("Mapped Incidents (for state):", fetchedIncidents); // <--- Log 2: Mapped data
 
       } catch (err) {
           setError(err instanceof Error ? err.message : 'An unknown error occurred');
@@ -486,6 +495,7 @@ function IncidentList({ incidents, teams, getPriorityColor, getStatusColor, onUn
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {incidents.map((incident) => {
+        console.log("Rendering Incident:", incident); // <--- Log 3: Incident object in list
         // Find teams assigned to THIS specific incident
         // Matching based on a conventional string in current_assignment
         const assignmentString = `Incident: ${incident.title}`;
@@ -510,7 +520,7 @@ function IncidentList({ incidents, teams, getPriorityColor, getStatusColor, onUn
             </CardHeader>
             <CardContent>
               <div className="text-sm text-muted-foreground mb-2">
-                 Location: ({incident.latitude.toFixed(4)}, {incident.longitude.toFixed(4)})
+                 Location: {incident.location_name || `(${incident.latitude.toFixed(4)}, ${incident.longitude.toFixed(4)})`}
               </div>
                <div className="text-sm font-medium mb-2">Assigned Teams ({assignedTeams.length}):</div>
               {assignedTeams.length > 0 ? (

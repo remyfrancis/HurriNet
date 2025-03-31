@@ -9,6 +9,11 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 import uuid
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut, GeocoderServiceError
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def incident_photo_path(instance, filename):
@@ -32,6 +37,12 @@ class Incident(models.Model):
     description = models.TextField()
     location = gis_models.PointField(
         help_text="Geographic coordinates of the incident", geography=True, srid=4326
+    )
+    location_name = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Approximate community/district name (auto-generated)",
     )
     affected_area = gis_models.PolygonField(
         null=True,
@@ -69,6 +80,51 @@ class Incident(models.Model):
 
     def __str__(self):
         return f"{self.title} - {self.incident_type}"
+
+    def get_location_name(self, force_update=False):
+        """Performs reverse geocoding to get a location name."""
+        if self.location_name and not force_update:
+            return self.location_name
+
+        if not self.location:
+            return None
+
+        try:
+            latitude = self.location.y
+            longitude = self.location.x
+
+            geolocator = Nominatim(user_agent="hurrinet_app")
+            location_info = geolocator.reverse(
+                (latitude, longitude), exactly_one=True, language="en", timeout=10
+            )
+
+            if location_info and location_info.address:
+                address = location_info.raw.get("address", {})
+                name = (
+                    address.get("suburb")
+                    or address.get("city_district")
+                    or address.get("city")
+                    or address.get("town")
+                    or address.get("village")
+                )
+                if not name:
+                    name = location_info.address.split(",")[0]
+                return name.strip()
+            else:
+                return "Unknown Location"
+        except (GeocoderTimedOut, GeocoderServiceError) as e:
+            logger.error(f"Reverse geocoding failed for incident {self.id}: {e}")
+            return "Geocoding Failed"
+        except Exception as e:
+            logger.error(
+                f"Unexpected error during reverse geocoding for incident {self.id}: {e}"
+            )
+            return "Error"
+
+    def save(self, *args, **kwargs):
+        if self.location and not self.location_name:
+            self.location_name = self.get_location_name()
+        super().save(*args, **kwargs)
 
 
 class IncidentUpdate(models.Model):

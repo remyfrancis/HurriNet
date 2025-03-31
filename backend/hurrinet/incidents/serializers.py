@@ -101,6 +101,7 @@ class IncidentSerializer(GeoFeatureModelSerializer):
             "title",
             "description",
             "location",
+            "location_name",
             "affected_area",
             "incident_type",
             "severity",
