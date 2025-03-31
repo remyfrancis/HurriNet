@@ -610,17 +610,17 @@ export default function InventoryAllocation() {
       <TabsContent value="automated" className="space-y-4">
         <Card>
           <CardHeader>
-            <CardTitle>Automated Allocation with Hungarian Algorithm</CardTitle>
-            <CardDescription>Optimize inventory allocation using the Hungarian algorithm</CardDescription>
+            <CardTitle>Automated Allocation</CardTitle>
+            <CardDescription>Optimize inventory allocation.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="text-sm text-muted-foreground">
               <p>
-                The Hungarian algorithm will optimize the allocation of inventory items from suppliers to resources
+                This algorithm will automatically optimize the allocation of inventory items from suppliers to resources
                 based on:
               </p>
               <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>Geographic proximity (minimize transportation distance)</li>
+                <li>Geographic proximity (minimizing transportation distance)</li>
                 <li>Resource needs and priorities</li>
                 <li>Supplier capacity and availability</li>
                 <li>Item type compatibility with resources</li>
@@ -663,49 +663,14 @@ export default function InventoryAllocation() {
                     Running Algorithm...
                   </>
                 ) : (
-                  "Run Hungarian Algorithm"
+                  "Run Optimization Algorithm"
                 )}
               </Button>
             )}
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Algorithm Explanation</CardTitle>
-            <CardDescription>How the Hungarian algorithm optimizes resource allocation</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4 text-sm">
-              <p>
-                The Hungarian algorithm (also known as the Kuhn-Munkres algorithm) is a combinatorial optimization
-                algorithm that solves the assignment problem in polynomial time.
-              </p>
 
-              <div>
-                <h4 className="font-medium mb-2">How it works:</h4>
-                <ol className="list-decimal pl-5 space-y-1">
-                  <li>
-                    Creates a cost matrix between suppliers and resources based on distance, need, and compatibility
-                  </li>
-                  <li>Performs row and column reductions to find the minimum number of lines covering all zeros</li>
-                  <li>Iteratively adjusts the matrix until an optimal assignment is found</li>
-                  <li>Produces the optimal allocation that minimizes total cost</li>
-                </ol>
-              </div>
-
-              <div>
-                <h4 className="font-medium mb-2">Benefits:</h4>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>Minimizes transportation costs and delivery time</li>
-                  <li>Ensures efficient resource utilization</li>
-                  <li>Optimizes for multiple constraints simultaneously</li>
-                  <li>Guarantees mathematically optimal solutions</li>
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </TabsContent>
     </Tabs>
   )
