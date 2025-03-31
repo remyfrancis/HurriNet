@@ -17,7 +17,7 @@ class TeamAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at", "updated_at")
     inlines = [TeamMemberInline]
     fieldsets = (
-        (None, {"fields": ("name", "description", "team_type", "status")}),
+        (None, {"fields": ("name", "description", "team_type", "specialty", "status")}),
         ("Team Management", {"fields": ("leader", "is_active")}),
         (
             "Assignment Information",

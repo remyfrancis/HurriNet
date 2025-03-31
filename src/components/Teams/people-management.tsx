@@ -321,6 +321,15 @@ export default function PeopleManagement() {
     }
   };
 
+  // --- Helper function to format role display ---
+  const formatRoleDisplay = (role: string | null | undefined): string => {
+    if (!role) return 'N/A';
+    return role
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
   // --- Render Logic ---
   if (isLoading) {
     return <div>Loading personnel data...</div>;
@@ -453,7 +462,8 @@ export default function PeopleManagement() {
                 <TableRow key={person.id}>
                   <TableCell className="font-medium">{person.name}</TableCell>
                   <TableCell>{person.email}</TableCell>
-                  <TableCell>{person.role}</TableCell>
+                  {/* Use the formatter function for role display */}
+                  <TableCell>{formatRoleDisplay(person.role)}</TableCell>
                   {/* Skills display removed for brevity, add back if needed 
                   <TableCell>
                     <div className="flex flex-wrap gap-1">

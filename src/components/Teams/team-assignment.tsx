@@ -18,278 +18,270 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Search, Plus, X, AlertTriangle, CheckCircle2 } from "lucide-react"
+import { Search, Plus, X, AlertTriangle, CheckCircle2, MinusCircle } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
-type Team = {
-  id: number
-  name: string
-  type: string
-  status: string
-  memberCount: number
-  leader: string
+// --- Interfaces based on Backend --- 
+// Interface for Team (simplified for assignment context)
+interface Team {
+  id: number;
+  name: string;
+  team_type_display: string;
+  status: string; // Needed to filter available teams?
+  current_assignment?: string | null;
+  location?: string | null;
 }
 
-type Assignment = {
-  id: number
-  teamId: number
-  teamName: string
-  entityId: number
-  entityName: string
-  entityType: "INCIDENT" | "MEDICAL" | "SHELTER"
-  assignedDate: string
-  status: "ACTIVE" | "COMPLETED" | "PENDING"
+// Interface for Incident (based on previous usage in map)
+interface Incident {
+  id: number;
+  title: string;
+  description: string;
+  latitude: number;
+  longitude: number;
+  severity: 'LOW' | 'MODERATE' | 'HIGH' | 'EXTREME';
+  created_at: string;
+  type: 'incident'; // Keep type for consistency if needed
+  // Add other fields if relevant, e.g., location description
 }
 
-type Entity = {
-  id: number
-  name: string
-  type: "INCIDENT" | "MEDICAL" | "SHELTER"
-  status: string
-  location: string
-  priority: "HIGH" | "MEDIUM" | "LOW"
-}
+// Remove mock Entity and Assignment types
+// type Entity = { ... }
+// type Assignment = { ... }
+// --- End Interfaces ---
 
 export default function TeamAssignment() {
   const [teams, setTeams] = useState<Team[]>([])
-  const [entities, setEntities] = useState<Entity[]>([])
-  const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [incidents, setIncidents] = useState<Incident[]>([])
+  // Remove mock state
+  // const [entities, setEntities] = useState<Entity[]>([]) 
+  // const [assignments, setAssignments] = useState<Assignment[]>([])
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterType, setFilterType] = useState<string | null>(null)
+  // const [filterType, setFilterType] = useState<string | null>(null) // Filter might be less relevant now
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedTeamId, setSelectedTeamId] = useState<string>("")
-  const [selectedEntityId, setSelectedEntityId] = useState<string>("")
-  const [currentTab, setCurrentTab] = useState<string>("incidents")
+  const [selectedIncidentId, setSelectedIncidentId] = useState<string>("") // Renamed from entityId
+  // const [currentTab, setCurrentTab] = useState<string>("incidents") // Simplify tabs later if needed
   const [alertMessage, setAlertMessage] = useState<{ type: "success" | "error"; message: string } | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // --- Fetch Real Data (Moved outside useEffect) --- 
+  const fetchData = async () => {
+      setIsLoading(true);
+      setError(null);
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+          setError('Authentication required');
+          setIsLoading(false);
+          return;
+      }
+
+      try {
+          // Fetch Teams
+          const teamResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/teams/`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!teamResponse.ok) throw new Error(`Failed to fetch teams: ${teamResponse.statusText}`);
+          const teamData = await teamResponse.json();
+          setTeams(Array.isArray(teamData) ? teamData : teamData.results || []);
+
+          // Fetch Active Incidents (add is_resolved=false if backend supports it)
+          const incidentResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/incidents/?is_resolved=false`, { // Example filter
+              headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!incidentResponse.ok) throw new Error(`Failed to fetch incidents: ${incidentResponse.statusText}`);
+          const incidentData = await incidentResponse.json();
+          
+          let fetchedIncidents: Incident[] = [];
+          const defaultCoords = { latitude: 13.9094, longitude: -60.9789 }; // Saint Lucia Center
+          const ewktPointRegex = /SRID=\d+;\s*POINT\s*\(\s*(-?\d+\.?\d*)\s+(-?\d+\.?\d*)\s*\)/i;
+
+          if (incidentData.type === 'FeatureCollection' && Array.isArray(incidentData.features)) {
+               fetchedIncidents = incidentData.features
+                  .filter((feature: any) => !feature.properties?.is_resolved) // Ensure filtering
+                  .map((feature: any) => {
+                      let latitude = defaultCoords.latitude;
+                      let longitude = defaultCoords.longitude;
+
+                      if (typeof feature.geometry === 'string') {
+                          const ewktMatch = feature.geometry.match(ewktPointRegex);
+                          if (ewktMatch && ewktMatch.length >= 3) {
+                              const lon = parseFloat(ewktMatch[1]);
+                              const lat = parseFloat(ewktMatch[2]);
+                              if (!isNaN(lon) && !isNaN(lat)) {
+                                  longitude = lon;
+                                  latitude = lat;
+                              }
+                          }
+                      } else if (feature.geometry?.type === 'Point' && Array.isArray(feature.geometry?.coordinates) && feature.geometry.coordinates.length >= 2) {
+                           // Handle GeoJSON Point format: [longitude, latitude]
+                          longitude = feature.geometry.coordinates[0];
+                          latitude = feature.geometry.coordinates[1];
+                      }
+
+                      return {
+                          id: feature.id,
+                          title: feature.properties?.title || 'Incident Report',
+                          description: feature.properties?.description || 'No description',
+                          latitude,
+                          longitude,
+                          severity: feature.properties?.severity || 'MODERATE',
+                          created_at: feature.properties?.created_at || new Date().toISOString(),
+                          type: 'incident' as const,
+                      };
+                  });
+          // Add handling for other potential incidentData structures if necessary (Array, Paginated Results)
+          } else {
+               console.warn("Incidents data format not recognized as GeoJSON FeatureCollection. Attempting fallback.");
+              // Add fallback logic here if needed, similar to above map but checking incident properties directly
+          }
+          setIncidents(fetchedIncidents);
+
+      } catch (err) {
+          setError(err instanceof Error ? err.message : 'An unknown error occurred');
+          setTeams([]);
+          setIncidents([]);
+      } finally {
+          setIsLoading(false);
+      }
+  };
 
   useEffect(() => {
-    // In a real app, fetch this data from your API
-    const mockTeams: Team[] = [
-      {
-        id: 1,
-        name: "Alpha Medical Team",
-        type: "MEDICAL",
-        status: "ACTIVE",
-        memberCount: 8,
-        leader: "Dr. Sarah Johnson",
-      },
-      {
-        id: 2,
-        name: "Bravo Rescue Squad",
-        type: "RESCUE",
-        status: "DEPLOYED",
-        memberCount: 12,
-        leader: "Captain Michael Chen",
-      },
-      {
-        id: 3,
-        name: "Charlie Logistics",
-        type: "LOGISTICS",
-        status: "ACTIVE",
-        memberCount: 6,
-        leader: "Maria Rodriguez",
-      },
-      {
-        id: 4,
-        name: "Delta Security",
-        type: "SECURITY",
-        status: "STANDBY",
-        memberCount: 10,
-        leader: "Officer James Wilson",
-      },
-      {
-        id: 5,
-        name: "Echo Response Team",
-        type: "GENERAL",
-        status: "UNAVAILABLE",
-        memberCount: 5,
-        leader: "Alex Thompson",
-      },
-    ]
-
-    const mockEntities: Entity[] = [
-      {
-        id: 1,
-        name: "Downtown Flooding",
-        type: "INCIDENT",
-        status: "ACTIVE",
-        location: "Downtown Area",
-        priority: "HIGH",
-      },
-      {
-        id: 2,
-        name: "Highway Accident",
-        type: "INCIDENT",
-        status: "ACTIVE",
-        location: "Highway 101, Mile 45",
-        priority: "MEDIUM",
-      },
-      {
-        id: 3,
-        name: "Central Hospital",
-        type: "MEDICAL",
-        status: "OPERATIONAL",
-        location: "123 Medical Dr",
-        priority: "HIGH",
-      },
-      {
-        id: 4,
-        name: "Eastside Clinic",
-        type: "MEDICAL",
-        status: "UNDERSTAFFED",
-        location: "456 Health Ave",
-        priority: "MEDIUM",
-      },
-      {
-        id: 5,
-        name: "Community Center Shelter",
-        type: "SHELTER",
-        status: "OPEN",
-        location: "789 Community Blvd",
-        priority: "MEDIUM",
-      },
-      {
-        id: 6,
-        name: "School Gymnasium Shelter",
-        type: "SHELTER",
-        status: "OPEN",
-        location: "101 Education St",
-        priority: "LOW",
-      },
-    ]
-
-    const mockAssignments: Assignment[] = [
-      {
-        id: 1,
-        teamId: 1,
-        teamName: "Alpha Medical Team",
-        entityId: 3,
-        entityName: "Central Hospital",
-        entityType: "MEDICAL",
-        assignedDate: "2023-06-15",
-        status: "ACTIVE",
-      },
-      {
-        id: 2,
-        teamId: 2,
-        teamName: "Bravo Rescue Squad",
-        entityId: 1,
-        entityName: "Downtown Flooding",
-        entityType: "INCIDENT",
-        assignedDate: "2023-06-14",
-        status: "ACTIVE",
-      },
-      {
-        id: 3,
-        teamId: 5,
-        teamName: "Echo Response Team",
-        entityId: 5,
-        entityName: "Community Center Shelter",
-        entityType: "SHELTER",
-        assignedDate: "2023-06-10",
-        status: "COMPLETED",
-      },
-    ]
-
-    setTeams(mockTeams)
-    setEntities(mockEntities)
-    setAssignments(mockAssignments)
+    fetchData(); // Call the function defined outside
   }, [])
+  // --- End Fetch ---
 
-  const handleCreateAssignment = () => {
-    if (!selectedTeamId || !selectedEntityId) return
+  // --- Handle Assignment Creation (API Call) --- 
+  const handleCreateAssignment = async () => {
+    if (!selectedTeamId || !selectedIncidentId) return;
+    setError(null);
+    setAlertMessage(null);
 
-    const teamId = Number.parseInt(selectedTeamId)
-    const entityId = Number.parseInt(selectedEntityId)
+    const teamId = Number.parseInt(selectedTeamId);
+    const incidentId = Number.parseInt(selectedIncidentId);
+    const incident = incidents.find(i => i.id === incidentId);
+    const team = teams.find(t => t.id === teamId);
 
-    const team = teams.find((t) => t.id === teamId)
-    const entity = entities.find((e) => e.id === entityId)
-
-    if (!team || !entity) return
-
-    // Check if this team is already assigned to this entity
-    const existingAssignment = assignments.find(
-      (a) => a.teamId === teamId && a.entityId === entityId && a.status === "ACTIVE",
-    )
-
-    if (existingAssignment) {
-      setAlertMessage({
-        type: "error",
-        message: `${team.name} is already assigned to ${entity.name}`,
-      })
-      return
+    if (!incident || !team) {
+        setError("Selected team or incident not found.");
+        return;
     }
 
-    const newAssignment: Assignment = {
-      id: assignments.length + 1,
-      teamId,
-      teamName: team.name,
-      entityId,
-      entityName: entity.name,
-      entityType: entity.type,
-      assignedDate: new Date().toISOString().split("T")[0],
-      status: "ACTIVE",
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+        setError('Authentication required');
+        return;
     }
 
-    setAssignments([...assignments, newAssignment])
-    setSelectedTeamId("")
-    setSelectedEntityId("")
-    setIsDialogOpen(false)
+    // Construct assignment details (adjust as needed)
+    const assignmentPayload = {
+        current_assignment: `Incident: ${incident.title}`,
+        location: `Incident Location (${incident.latitude.toFixed(4)}, ${incident.longitude.toFixed(4)})`,
+        status: 'DEPLOYED' // Or another appropriate status like 'ACTIVE' or 'ASSIGNED'? Check model.
+    };
 
-    setAlertMessage({
-      type: "success",
-      message: `Successfully assigned ${team.name} to ${entity.name}`,
-    })
+    try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/teams/${teamId}/`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(assignmentPayload),
+        });
 
-    // Clear alert after 5 seconds
-    setTimeout(() => {
-      setAlertMessage(null)
-    }, 5000)
-  }
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: `Request failed: ${response.statusText}` }));
+            throw new Error(errorData.detail || 'Failed to assign team');
+        }
 
-  const handleRemoveAssignment = (id: number) => {
-    setAssignments(assignments.filter((assignment) => assignment.id !== id))
-  }
+        // Success
+        setAlertMessage({ type: "success", message: `Successfully assigned ${team.name} to ${incident.title}` });
+        setIsDialogOpen(false);
+        setSelectedTeamId("");
+        setSelectedIncidentId("");
+        fetchData(); // Re-fetch teams to update assignment display
 
-  const completeAssignment = (id: number) => {
-    setAssignments(
-      assignments.map((assignment) => (assignment.id === id ? { ...assignment, status: "COMPLETED" } : assignment)),
-    )
-  }
+    } catch (err) {
+        setError(err instanceof Error ? err.message : 'An unknown error occurred during assignment');
+    } finally {
+        setTimeout(() => setAlertMessage(null), 5000);
+    }
+  };
+  // --- End Assignment Creation ---
 
-  const filteredEntities = entities.filter((entity) => {
-    const matchesSearch = entity.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesType =
-      currentTab === "all"
-        ? true
-        : currentTab === "incidents"
-          ? entity.type === "INCIDENT"
-          : currentTab === "medical"
-            ? entity.type === "MEDICAL"
-            : currentTab === "shelters"
-              ? entity.type === "SHELTER"
-              : true
-    return matchesSearch && matchesType
-  })
+  // --- Handle Unassignment --- 
+  const handleUnassignTeam = async (teamId: number) => {
+    setError(null);
+    setAlertMessage(null);
+    const team = teams.find(t => t.id === teamId);
+    if (!team) return;
 
-  const filteredAssignments = assignments.filter((assignment) => {
-    const matchesSearch =
-      assignment.teamName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      assignment.entityName.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesFilter = filterType === "ALL" || filterType === null ? true : assignment.entityType === filterType
-    return matchesSearch && matchesFilter
-  })
+    const token = localStorage.getItem('accessToken');
+     if (!token) {
+        setError('Authentication required');
+        return;
+    }
+
+     // Payload to clear assignment and set status (e.g., to STANDBY)
+     const unassignPayload = {
+        current_assignment: null,
+        location: null,
+        status: 'STANDBY' // Or 'ACTIVE'? Check model/logic
+    };
+
+    if (!window.confirm(`Are you sure you want to unassign ${team.name}?`)) return;
+
+    try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/teams/${teamId}/`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(unassignPayload),
+        });
+
+         if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: `Request failed: ${response.statusText}` }));
+            throw new Error(errorData.detail || 'Failed to unassign team');
+        }
+
+        // Success
+        setAlertMessage({ type: "success", message: `Successfully unassigned ${team.name}` });
+        fetchData(); // Re-fetch teams
+
+    } catch (err) {
+        setError(err instanceof Error ? err.message : 'An unknown error occurred during unassignment');
+    } finally {
+        setTimeout(() => setAlertMessage(null), 5000);
+    }
+  };
+  // --- End Unassignment ---
+
+  // Remove mock data handlers
+  // const handleRemoveAssignment = ... 
+  // const completeAssignment = ... 
+
+  const filteredIncidents = incidents.filter((incident) => {
+    const matchesSearch = incident.title.toLowerCase().includes(searchTerm.toLowerCase())
+    // Add type/status filtering if needed later
+    return matchesSearch;
+  });
+
+  // Remove mock assignment filtering
+  // const filteredAssignments = ... 
 
   const getAvailableTeams = () => {
-    // Get teams that are not currently assigned or are in STANDBY status
-    const assignedTeamIds = assignments.filter((a) => a.status === "ACTIVE").map((a) => a.teamId)
-
-    return teams.filter((team) => !assignedTeamIds.includes(team.id) || team.status === "STANDBY")
+    // Filter teams that do not have a current_assignment or status allows reassignment (e.g., STANDBY)
+    return teams.filter(team => !team.current_assignment || team.status === 'STANDBY');
   }
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "HIGH":
+      case "EXTREME": // Added Extreme
         return "bg-red-500"
       case "MEDIUM":
         return "bg-yellow-500"
@@ -300,24 +292,40 @@ export default function TeamAssignment() {
     }
   }
 
+  // Simplified getStatusColor for incidents/teams
   const getStatusColor = (status: string) => {
-    switch (status) {
+     switch (status?.toUpperCase()) {
       case "ACTIVE":
       case "OPERATIONAL":
       case "OPEN":
-        return "bg-green-500"
+      case "DEPLOYED": // Team status
+        return "bg-green-500";
+      case "STANDBY": // Team status
+        return "bg-purple-500";
+      case "ON_CALL": // Team status
+         return "bg-blue-500";
       case "PENDING":
       case "UNDERSTAFFED":
-        return "bg-yellow-500"
+      case "LIMITED": // Medical status
+        return "bg-yellow-500";
       case "COMPLETED":
-        return "bg-blue-500"
+      case "CLOSED": // Shelter/Medical status
+        return "bg-gray-600";
+      case "OFF_DUTY": // Team status
+      case "UNAVAILABLE": // Team status
+         return "bg-gray-500";
       default:
-        return "bg-gray-500"
+        return "bg-gray-400";
     }
+  }
+
+  if (isLoading) {
+      return <div>Loading assignment data...</div>;
   }
 
   return (
     <div className="space-y-6">
+      {/* Alert Messages */}
       {alertMessage && (
         <Alert variant={alertMessage.type === "success" ? "default" : "destructive"}>
           {alertMessage.type === "success" ? (
@@ -329,12 +337,21 @@ export default function TeamAssignment() {
           <AlertDescription>{alertMessage.message}</AlertDescription>
         </Alert>
       )}
+       {/* Error Display */}
+       {error && (
+          <Alert variant="destructive">
+             <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+      )}
 
+      {/* Search and New Assignment Button */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search..."
+            placeholder="Search incidents..."
             className="pl-8"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -351,22 +368,21 @@ export default function TeamAssignment() {
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Create New Assignment</DialogTitle>
-              <DialogDescription>Assign a team to an incident, medical facility, or shelter.</DialogDescription>
+              <DialogDescription>Assign an available team to an active incident.</DialogDescription>
             </DialogHeader>
-
+            {/* Assignment Form */}
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="team" className="text-right">
-                  Team
-                </Label>
+                <Label htmlFor="team" className="text-right">Team</Label>
                 <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
                   <SelectTrigger id="team" className="col-span-3">
-                    <SelectValue placeholder="Select team" />
+                    <SelectValue placeholder="Select available team" />
                   </SelectTrigger>
                   <SelectContent>
+                    {getAvailableTeams().length === 0 && <SelectItem value="" disabled>No available teams</SelectItem>}
                     {getAvailableTeams().map((team) => (
                       <SelectItem key={team.id} value={team.id.toString()}>
-                        {team.name} ({team.type}) - {team.memberCount} members
+                        {team.name} ({team.team_type_display})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -374,56 +390,33 @@ export default function TeamAssignment() {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="entity" className="text-right">
-                  Assign To
-                </Label>
-                <Select value={selectedEntityId} onValueChange={setSelectedEntityId}>
-                  <SelectTrigger id="entity" className="col-span-3">
-                    <SelectValue placeholder="Select destination" />
+                <Label htmlFor="incident" className="text-right">Incident</Label>
+                <Select value={selectedIncidentId} onValueChange={setSelectedIncidentId}>
+                  <SelectTrigger id="incident" className="col-span-3">
+                    <SelectValue placeholder="Select incident" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="incident-header" disabled>
-                      -- Incidents --
-                    </SelectItem>
-                    {entities
-                      .filter((e) => e.type === "INCIDENT")
-                      .map((entity) => (
-                        <SelectItem key={entity.id} value={entity.id.toString()}>
-                          {entity.name} ({entity.priority} priority)
+                     {incidents.length === 0 && <SelectItem value="" disabled>No active incidents found</SelectItem>}
+                    {incidents.map((incident) => (
+                        <SelectItem key={incident.id} value={incident.id.toString()}>
+                          {incident.title} ({incident.severity} severity)
                         </SelectItem>
                       ))}
-
-                    <SelectItem value="medical-header" disabled>
-                      -- Medical Facilities --
-                    </SelectItem>
-                    {entities
-                      .filter((e) => e.type === "MEDICAL")
-                      .map((entity) => (
-                        <SelectItem key={entity.id} value={entity.id.toString()}>
-                          {entity.name} ({entity.status})
-                        </SelectItem>
-                      ))}
-
-                    <SelectItem value="shelter-header" disabled>
-                      -- Shelters --
-                    </SelectItem>
-                    {entities
-                      .filter((e) => e.type === "SHELTER")
-                      .map((entity) => (
-                        <SelectItem key={entity.id} value={entity.id.toString()}>
-                          {entity.name} ({entity.status})
-                        </SelectItem>
-                      ))}
+                    {/* Keep other entity types commented out for now 
+                    <SelectItem value="medical-header" disabled>-- Medical Facilities --</SelectItem>
+                    ...
+                    <SelectItem value="shelter-header" disabled>-- Shelters --</SelectItem>
+                    ...
+                    */}
                   </SelectContent>
                 </Select>
               </div>
             </div>
-
+            {/* Dialog Footer */}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateAssignment} disabled={!selectedTeamId || !selectedEntityId}>
+              {error && <p className="text-sm text-red-500 mr-auto">Error: {error}</p>} 
+              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleCreateAssignment} disabled={!selectedTeamId || !selectedIncidentId}>
                 Create Assignment
               </Button>
             </DialogFooter>
@@ -431,207 +424,125 @@ export default function TeamAssignment() {
         </Dialog>
       </div>
 
-      <Tabs defaultValue="incidents" onValueChange={setCurrentTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="incidents">Incidents</TabsTrigger>
-          <TabsTrigger value="medical">Medical</TabsTrigger>
-          <TabsTrigger value="shelters">Shelters</TabsTrigger>
-          <TabsTrigger value="all">All Entities</TabsTrigger>
+      {/* Simplified Tabs - Showing Incidents Only for now */}
+      <Tabs defaultValue="incidents"> 
+        <TabsList className="grid w-full grid-cols-1"> {/* Simplified to 1 tab for now */} 
+          <TabsTrigger value="incidents">Active Incidents</TabsTrigger>
+          {/* <TabsTrigger value="medical">Medical</TabsTrigger> */}
+          {/* <TabsTrigger value="shelters">Shelters</TabsTrigger> */}
+          {/* <TabsTrigger value="all">All Entities</TabsTrigger> */}
         </TabsList>
 
         <TabsContent value="incidents" className="space-y-4 mt-4">
-          <EntityList
-            entities={filteredEntities.filter((e) => e.type === "INCIDENT")}
-            assignments={assignments}
-            getPriorityColor={getPriorityColor}
+           {/* Pass incidents and teams to the list */} 
+          <IncidentList 
+            incidents={filteredIncidents} 
+            teams={teams} 
+            getPriorityColor={getPriorityColor} 
             getStatusColor={getStatusColor}
+            onUnassignTeam={handleUnassignTeam} // Pass the unassign handler
           />
         </TabsContent>
 
+        {/* Keep other TabsContent commented out 
         <TabsContent value="medical" className="space-y-4 mt-4">
-          <EntityList
-            entities={filteredEntities.filter((e) => e.type === "MEDICAL")}
-            assignments={assignments}
-            getPriorityColor={getPriorityColor}
-            getStatusColor={getStatusColor}
-          />
+           ...
         </TabsContent>
-
         <TabsContent value="shelters" className="space-y-4 mt-4">
-          <EntityList
-            entities={filteredEntities.filter((e) => e.type === "SHELTER")}
-            assignments={assignments}
-            getPriorityColor={getPriorityColor}
-            getStatusColor={getStatusColor}
-          />
+           ...
         </TabsContent>
-
         <TabsContent value="all" className="space-y-4 mt-4">
-          <EntityList
-            entities={filteredEntities}
-            assignments={assignments}
-            getPriorityColor={getPriorityColor}
-            getStatusColor={getStatusColor}
-          />
+           ...
         </TabsContent>
+        */}
       </Tabs>
 
+      {/* Removed the separate "Current Team Assignments" Table */}
+      {/* 
       <Card>
         <CardHeader>
           <CardTitle>Current Team Assignments</CardTitle>
-          <CardDescription>View and manage all team assignments</CardDescription>
+           ...
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-2 mb-4">
-            <Select value={filterType || ""} onValueChange={(value) => setFilterType(value || null)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Types</SelectItem>
-                <SelectItem value="INCIDENT">Incidents</SelectItem>
-                <SelectItem value="MEDICAL">Medical</SelectItem>
-                <SelectItem value="SHELTER">Shelters</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Team</TableHead>
-                  <TableHead>Assigned To</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Date Assigned</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredAssignments.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">
-                      No assignments found. Create a new assignment to get started.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredAssignments.map((assignment) => (
-                    <TableRow key={assignment.id}>
-                      <TableCell className="font-medium">{assignment.teamName}</TableCell>
-                      <TableCell>{assignment.entityName}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{assignment.entityType}</Badge>
-                      </TableCell>
-                      <TableCell>{assignment.assignedDate}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <div className={`h-2.5 w-2.5 rounded-full ${getStatusColor(assignment.status)} mr-2`}></div>
-                          {assignment.status}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          {assignment.status === "ACTIVE" && (
-                            <Button variant="outline" size="sm" onClick={() => completeAssignment(assignment.id)}>
-                              <CheckCircle2 className="h-4 w-4 mr-1" />
-                              Complete
-                            </Button>
-                          )}
-                          <Button variant="ghost" size="icon" onClick={() => handleRemoveAssignment(assignment.id)}>
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+           ...
         </CardContent>
       </Card>
+      */}
     </div>
   )
 }
 
-type EntityListProps = {
-  entities: {
-    id: number
-    name: string
-    type: string
-    status: string
-    location: string
-    priority: string
-  }[]
-  assignments: {
-    entityId: number
-    teamName: string
-    status: string
-  }[]
-  getPriorityColor: (priority: string) => string
-  getStatusColor: (status: string) => string
-}
+// --- Renamed and Updated EntityList to IncidentList --- 
+type IncidentListProps = {
+  incidents: Incident[];
+  teams: Team[];
+  getPriorityColor: (priority: string) => string;
+  getStatusColor: (status: string) => string;
+  onUnassignTeam: (teamId: number) => void; // Callback for unassigning
+};
 
-function EntityList({ entities, assignments, getPriorityColor, getStatusColor }: EntityListProps) {
+function IncidentList({ incidents, teams, getPriorityColor, getStatusColor, onUnassignTeam }: IncidentListProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {entities.map((entity) => {
-        const assignedTeams = assignments.filter((a) => a.entityId === entity.id && a.status === "ACTIVE")
+      {incidents.map((incident) => {
+        // Find teams assigned to THIS specific incident
+        // Matching based on a conventional string in current_assignment
+        const assignmentString = `Incident: ${incident.title}`;
+        const assignedTeams = teams.filter(team => team.current_assignment === assignmentString);
 
         return (
-          <Card key={entity.id}>
+          <Card key={incident.id}>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>{entity.name}</CardTitle>
-                  <CardDescription>{entity.location}</CardDescription>
+                  <CardTitle>{incident.title}</CardTitle>
+                  <CardDescription>{incident.description.substring(0, 100)}{incident.description.length > 100 ? '...' : ''}</CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">{entity.type}</Badge>
+                <div className="flex items-center gap-2 flex-col sm:flex-row">
+                  <Badge variant="outline">{incident.type.toUpperCase()}</Badge>
                   <div className="flex items-center">
-                    <div className={`h-2.5 w-2.5 rounded-full ${getStatusColor(entity.status)} mr-2`}></div>
-                    <span className="text-sm">{entity.status}</span>
+                    <div className={`h-2.5 w-2.5 rounded-full ${getPriorityColor(incident.severity)} mr-2`}></div>
+                    <span className="text-sm">{incident.severity} Priority</span>
                   </div>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  <div className={`h-2.5 w-2.5 rounded-full ${getPriorityColor(entity.priority)} mr-2`}></div>
-                  <span className="text-sm">{entity.priority} Priority</span>
-                </div>
-                <div className="text-sm">
-                  {assignedTeams.length} team{assignedTeams.length !== 1 ? "s" : ""} assigned
-                </div>
+              <div className="text-sm text-muted-foreground mb-2">
+                 Location: ({incident.latitude.toFixed(4)}, {incident.longitude.toFixed(4)})
               </div>
-
+               <div className="text-sm font-medium mb-2">Assigned Teams ({assignedTeams.length}):</div>
               {assignedTeams.length > 0 ? (
                 <div className="space-y-2">
-                  {assignedTeams.map((team, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-secondary/20 rounded-md">
-                      <span>{team.teamName}</span>
-                      <Badge variant="outline">{team.status}</Badge>
+                  {assignedTeams.map((team) => (
+                    <div key={team.id} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                      <div className="flex items-center">
+                          <div className={`h-2.5 w-2.5 rounded-full ${getStatusColor(team.status)} mr-2`}></div>
+                          <span>{team.name} ({team.team_type_display}) - {team.status}</span>
+                      </div>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-red-500 hover:bg-red-100" onClick={() => onUnassignTeam(team.id)} title="Unassign Team">
+                          <MinusCircle className="h-4 w-4" />
+                      </Button>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-2 text-muted-foreground">No teams assigned</div>
+                <div className="text-center py-2 text-sm text-muted-foreground">No teams currently assigned</div>
               )}
             </CardContent>
+            {/* Optional Footer 
             <CardFooter className="flex justify-end">
-              <Button variant="outline" size="sm">
-                View Details
-              </Button>
+              <Button variant="outline" size="sm">View Details</Button> 
             </CardFooter>
+            */}
           </Card>
         )
       })}
 
-      {entities.length === 0 && (
-        <div className="col-span-2 text-center py-8 text-muted-foreground">
-          No entities found matching your search criteria.
+      {incidents.length === 0 && (
+        <div className="col-span-1 md:col-span-2 text-center py-8 text-muted-foreground">
+          No active incidents found matching your search criteria.
         </div>
       )}
     </div>
