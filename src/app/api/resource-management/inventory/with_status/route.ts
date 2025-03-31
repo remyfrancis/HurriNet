@@ -38,7 +38,6 @@ export async function GET(request: NextRequest) {
       backendUrl += `?${queryString}`;
     }
 
-    console.log('Fetching from backend URL:', backendUrl);
 
     // Forward the request to the backend
     const response = await fetch(backendUrl, {

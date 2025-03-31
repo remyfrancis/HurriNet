@@ -29,6 +29,7 @@ type Supplier = {
   id: number
   name: string
   supplier_type: string
+  location: { lat: number; lng: number }
 }
 
 type Resource = {
@@ -36,7 +37,8 @@ type Resource = {
   name: string
   resource_type: string
   capacity: number
-  currentCount: number
+  current_count: number
+  location: { lat: number; lng: number }
 }
 
 export default function InventoryAllocation() {
@@ -92,11 +94,33 @@ export default function InventoryAllocation() {
           throw new Error('Failed to fetch suppliers')
         }
         const suppliersData = await suppliersResponse.json()
-        const formattedSuppliers = suppliersData.features.map((feature: any) => ({
-          id: feature.id,
-          name: feature.properties.name,
-          supplier_type: feature.properties.supplier_type
-        }))
+        console.log('Suppliers data:', suppliersData) // Debug log
+
+        const formattedSuppliers = suppliersData.features.map((feature: any) => {
+          // Debug log for each feature
+          console.log('Processing supplier feature:', feature)
+          
+          let location = { lat: 0, lng: 0 }
+          try {
+            if (feature.geometry && Array.isArray(feature.geometry.coordinates)) {
+              location = {
+                lat: feature.geometry.coordinates[1],
+                lng: feature.geometry.coordinates[0]
+              }
+            } else {
+              console.warn(`Missing or invalid geometry for supplier ${feature.properties.name}`)
+            }
+          } catch (err) {
+            console.warn(`Error processing location for supplier ${feature.properties.name}:`, err)
+          }
+
+          return {
+            id: feature.id,
+            name: feature.properties.name,
+            supplier_type: feature.properties.supplier_type,
+            location
+          }
+        })
         setSuppliers(formattedSuppliers)
 
         // Fetch resources
@@ -105,19 +129,45 @@ export default function InventoryAllocation() {
           throw new Error('Failed to fetch resources')
         }
         const resourcesData = await resourcesResponse.json()
-        const formattedResources = resourcesData.features.map((feature: any) => ({
-          id: feature.id,
-          name: feature.properties.name,
-          resource_type: feature.properties.resource_type,
-          capacity: feature.properties.capacity,
-          currentCount: feature.properties.current_count
-        }))
+        console.log('Resources data:', resourcesData) // Debug log
+
+        const formattedResources = resourcesData.features.map((feature: any) => {
+          // Debug log for each feature
+          console.log('Processing resource feature:', feature)
+          
+          let location = { lat: 0, lng: 0 }
+          try {
+            if (feature.geometry && Array.isArray(feature.geometry.coordinates)) {
+              location = {
+                lat: feature.geometry.coordinates[1],
+                lng: feature.geometry.coordinates[0]
+              }
+            } else {
+              console.warn(`Missing or invalid geometry for resource ${feature.properties.name}`)
+            }
+          } catch (err) {
+            console.warn(`Error processing location for resource ${feature.properties.name}:`, err)
+          }
+
+          return {
+            id: feature.id,
+            name: feature.properties.name,
+            resource_type: feature.properties.resource_type,
+            capacity: feature.properties.capacity,
+            current_count: feature.properties.current_count,
+            location
+          }
+        })
         setResources(formattedResources)
 
         setError(null)
       } catch (err) {
         console.error('Error fetching data:', err)
-        setError('Failed to load data from the server')
+        if (err instanceof Error) {
+          setError(`Failed to load data: ${err.message}`)
+        } else {
+          setError('Failed to load data from the server')
+        }
       } finally {
         setLoading(false)
       }
@@ -223,12 +273,58 @@ export default function InventoryAllocation() {
         throw new Error('Authentication required. Please log in.')
       }
 
+      // Filter unallocated items (items without a resource assigned)
+      const unallocatedItems = inventoryItems.filter(item => !item.resource_id && item.supplier_id)
+
+      // Filter resources that are not at full capacity
+      const availableResources = resources.filter(resource => resource.current_count < resource.capacity)
+
+      // Get all suppliers that have unallocated items
+      const relevantSuppliers = suppliers.filter(supplier => 
+        unallocatedItems.some(item => item.supplier_id === supplier.id)
+      )
+
+      // Validate data before sending
+      if (unallocatedItems.length === 0) {
+        throw new Error('No unallocated items available for optimization')
+      }
+
+      if (availableResources.length === 0) {
+        throw new Error('No available resources with capacity for allocation')
+      }
+
+      if (relevantSuppliers.length === 0) {
+        throw new Error('No suppliers found with unallocated items')
+      }
+
+      // Format data for backend
+      const formattedResources = availableResources.map(resource => ({
+        id: resource.id,
+        name: resource.name,
+        resource_type: resource.resource_type,
+        capacity: resource.capacity,
+        current_count: resource.current_count,
+        location: resource.location
+      }))
+
+      // Log data being sent for debugging
+      console.log('Sending data:', {
+        items: unallocatedItems,
+        resources: formattedResources,
+        suppliers: relevantSuppliers
+      })
+
       const response = await fetch('/api/resource-management/inventory/optimize_allocation', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({
+          items: unallocatedItems,
+          resources: formattedResources,
+          suppliers: relevantSuppliers
+        })
       })
 
       if (!response.ok) {

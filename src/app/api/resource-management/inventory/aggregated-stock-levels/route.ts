@@ -12,7 +12,6 @@ export async function GET(request: NextRequest) {
     const authHeader = request.headers.get('Authorization');
     
     const apiUrl = `${BACKEND_URL}${API_PATH}`;
-    console.log('Attempting to fetch aggregated stock levels from backend:', apiUrl);
     
     // Forward the request to the Django backend with a timeout
     const controller = new AbortController();
@@ -29,7 +28,6 @@ export async function GET(request: NextRequest) {
       
       clearTimeout(timeoutId);
       
-      console.log('Backend response status:', response.status);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -42,7 +40,6 @@ export async function GET(request: NextRequest) {
 
       // Get the response data
       const data = await response.json();
-      console.log('Successfully fetched aggregated stock levels data');
       
       // Return the response
       return NextResponse.json(data, { status: response.status });

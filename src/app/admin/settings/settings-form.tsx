@@ -49,7 +49,6 @@ export default function SettingsForm() {
     // Simulate API call
     setTimeout(() => {
       setIsLoading(false)
-      console.log(values)
       toast({
         title: "Settings updated",
         description: "Your system settings have been successfully updated.",

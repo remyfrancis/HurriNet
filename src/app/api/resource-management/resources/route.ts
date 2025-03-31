@@ -17,7 +17,6 @@ export async function GET(request: NextRequest) {
     // Build the backend URL - Use the correct URL structure from the Django backend
     const backendUrl = `${BACKEND_URL}/api/resource-management/resources/`;
     
-    console.log('Fetching resources from backend URL:', backendUrl);
 
     // Forward the request to the backend
     const response = await fetch(backendUrl, {

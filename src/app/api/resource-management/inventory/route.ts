@@ -17,7 +17,6 @@ export async function GET(request: NextRequest) {
     // Build the backend URL - Use the correct URL structure from the Django backend
     const backendUrl = `${BACKEND_URL}/api/resource-management/inventory/`;
     
-    console.log('Fetching from backend URL:', backendUrl);
 
     // Forward the request to the backend
     const response = await fetch(backendUrl, {
@@ -66,7 +65,6 @@ export async function POST(request: NextRequest) {
     // Build the backend URL - Use the correct URL structure from the Django backend
     const backendUrl = `${BACKEND_URL}/api/resource-management/inventory/`;
     
-    console.log('Sending data to backend URL:', backendUrl, body);
 
     // Forward the request to the backend
     const response = await fetch(backendUrl, {

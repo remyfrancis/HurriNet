@@ -29,7 +29,6 @@ export async function GET(
     // Build the backend URL - Use the correct URL structure from the Django backend
     const backendUrl = `${BACKEND_URL}/api/resource-management/distributions/${id}/`;
     
-    console.log('Fetching distribution from backend URL:', backendUrl);
 
     // Forward the request to the backend
     const response = await fetch(backendUrl, {
@@ -90,7 +89,6 @@ export async function PUT(
     // Build the backend URL - Use the correct URL structure from the Django backend
     const backendUrl = `${BACKEND_URL}/api/resource-management/distributions/${id}/`;
     
-    console.log('Updating distribution at backend URL:', backendUrl, body);
 
     // Forward the request to the backend
     const response = await fetch(backendUrl, {
@@ -150,7 +148,6 @@ export async function DELETE(
     // Build the backend URL - Use the correct URL structure from the Django backend
     const backendUrl = `${BACKEND_URL}/api/resource-management/distributions/${id}/`;
     
-    console.log('Deleting distribution from backend URL:', backendUrl);
 
     // Forward the request to the backend
     const response = await fetch(backendUrl, {

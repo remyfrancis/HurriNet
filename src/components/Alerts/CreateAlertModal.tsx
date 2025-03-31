@@ -69,10 +69,20 @@ export function CreateAlertModal({ onCreateAlert }: CreateAlertModalProps) {
   })
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    const token = localStorage.getItem('accessToken')
+    if (!token) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to create alerts",
+        variant: "destructive",
+      })
+      return
+    }
+
     const result = await createAlert({
       ...values,
       active: true,
-    })
+    }, token)
 
     if (result.success) {
       toast({
@@ -81,6 +91,9 @@ export function CreateAlertModal({ onCreateAlert }: CreateAlertModalProps) {
       })
       form.reset()
       setOpen(false)
+      if (onCreateAlert) {
+        onCreateAlert(result.alert)
+      }
     } else {
       toast({
         title: "Error",

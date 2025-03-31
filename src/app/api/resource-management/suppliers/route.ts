@@ -12,7 +12,6 @@ export async function GET(request: NextRequest) {
     const authHeader = request.headers.get('Authorization');
     
     const apiUrl = `${BACKEND_URL}${API_PATH}`;
-    console.log('Attempting to fetch suppliers from backend:', apiUrl);
     
     // Forward the request to the Django backend with a timeout
     const controller = new AbortController();
@@ -29,7 +28,6 @@ export async function GET(request: NextRequest) {
       
       clearTimeout(timeoutId);
       
-      console.log('Backend response status:', response.status);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -42,7 +40,6 @@ export async function GET(request: NextRequest) {
 
       // Get the response data
       const data = await response.json();
-      console.log('Successfully fetched suppliers data');
       
       // Return the response
       return NextResponse.json(data, { status: response.status });
@@ -92,7 +89,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     
     const apiUrl = `${BACKEND_URL}${API_PATH}`;
-    console.log('Attempting to create supplier in backend:', apiUrl);
+
     
     // Forward the request to the Django backend with a timeout
     const controller = new AbortController();
@@ -111,7 +108,7 @@ export async function POST(request: NextRequest) {
       
       clearTimeout(timeoutId);
       
-      console.log('Backend response status for POST:', response.status);
+
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -124,7 +121,6 @@ export async function POST(request: NextRequest) {
 
       // Get the response data
       const data = await response.json();
-      console.log('Successfully created supplier');
       
       // Return the response
       return NextResponse.json(data, { status: response.status });

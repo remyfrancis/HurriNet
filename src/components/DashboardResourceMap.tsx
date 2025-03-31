@@ -123,9 +123,7 @@ export function DashboardResourceMap({ onLocationSelect }: DashboardResourceMapP
       const data = await response.json();
       
       if (data.type === 'FeatureCollection' && Array.isArray(data.features)) {
-        console.log('Raw features:', data.features);
         const processedResources = data.features.map((feature: GeoJSONFeature) => {
-          console.log('Processing feature:', feature);
           const coordinates = Array.isArray(feature.geometry) ? feature.geometry : feature.geometry.coordinates;
           return {
             id: feature.properties.id ?? 0,
@@ -142,10 +140,8 @@ export function DashboardResourceMap({ onLocationSelect }: DashboardResourceMapP
             coverage_area: feature.properties.coverage_area
           };
         });
-        console.log('Processed resources:', processedResources);
         setResources(processedResources);
       } else if (Array.isArray(data)) {
-        console.log('Raw data array:', data);
         const mappedData = data.map(res => ({
           ...res,
           id: res.id ?? 0,

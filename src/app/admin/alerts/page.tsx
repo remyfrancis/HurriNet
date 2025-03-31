@@ -8,7 +8,6 @@ import { Skeleton } from "@/components/ui/skeleton"
 export default function AlertManagementPage() {
   const handleCreateAlert = (alert: any) => {
     console.log('New alert:', alert)
-    // You can add more logic here to handle the new alert
   }
 
   return (

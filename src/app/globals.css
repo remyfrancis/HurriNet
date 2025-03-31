@@ -115,6 +115,10 @@
   height: auto;
 }
 
+nextjs-portal {
+  display: none;
+}
+
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
   .mermaid-wrapper {
@@ -151,3 +155,4 @@
 .alert-marker.low {
   color: hsl(var(--primary));
 }
+

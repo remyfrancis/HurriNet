@@ -18,7 +18,6 @@ export async function GET(
     const authHeader = request.headers.get('Authorization');
     
     const apiUrl = `${BACKEND_URL}${getApiPath(supplierId)}`;
-    console.log(`Attempting to fetch items for supplier ${supplierId} from backend:`, apiUrl);
     
     // Forward the request to the Django backend with a timeout
     const controller = new AbortController();
@@ -35,7 +34,6 @@ export async function GET(
       
       clearTimeout(timeoutId);
       
-      console.log('Backend response status for supplier items:', response.status);
       
       if (!response.ok) {
         const errorText = await response.text();

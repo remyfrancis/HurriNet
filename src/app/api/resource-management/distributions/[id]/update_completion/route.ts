@@ -32,7 +32,6 @@ export async function POST(
     // Build the backend URL - Use the correct URL structure from the Django backend
     const backendUrl = `${BACKEND_URL}/api/resource-management/distributions/${id}/update_completion/`;
     
-    console.log('Updating distribution completion at backend URL:', backendUrl, body);
 
     // Forward the request to the backend
     const response = await fetch(backendUrl, {

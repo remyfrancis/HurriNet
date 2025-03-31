@@ -8,7 +8,6 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    console.log("Creating chat session with:", body);
     
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chats/sessions/`, {
       method: "POST",

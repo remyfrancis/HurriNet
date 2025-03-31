@@ -42,11 +42,6 @@ const navItems = [
     icon: Users,
   },
   {
-    title: 'Resources',
-    href: '/admin-dashboard/resources',
-    icon: Shield,
-  },
-  {
     title: 'Chat',
     href: '/chat',
     icon: MessageCircle,

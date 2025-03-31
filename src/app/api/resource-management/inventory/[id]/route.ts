@@ -22,7 +22,6 @@ export async function DELETE(
     // Build the backend URL - Use the correct URL structure from the Django backend
     const backendUrl = `${BACKEND_URL}/api/resource-management/inventory/${id}/`;
     
-    console.log('Deleting item from backend URL:', backendUrl);
 
     // Forward the request to the backend
     const response = await fetch(backendUrl, {
@@ -85,7 +84,6 @@ export async function PUT(
     // Build the backend URL - Use the correct URL structure from the Django backend
     const backendUrl = `${BACKEND_URL}/api/resource-management/inventory/${id}/`;
     
-    console.log('Updating item at backend URL:', backendUrl, body);
 
     // Forward the request to the backend
     const response = await fetch(backendUrl, {
@@ -141,7 +139,6 @@ export async function PATCH(
     // Build the backend URL - Use the correct URL structure from the Django backend
     const backendUrl = `${BACKEND_URL}/api/resource-management/inventory/${id}/`;
     
-    console.log('Partially updating item at backend URL:', backendUrl, body);
 
     // Forward the request to the backend
     const response = await fetch(backendUrl, {
@@ -194,7 +191,6 @@ export async function GET(
     // Build the backend URL - Use the correct URL structure from the Django backend
     const backendUrl = `${BACKEND_URL}/api/resource-management/inventory/${id}/`;
     
-    console.log('Fetching item from backend URL:', backendUrl);
 
     // Forward the request to the backend
     const response = await fetch(backendUrl, {

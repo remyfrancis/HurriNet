@@ -17,7 +17,6 @@ export async function GET(request: NextRequest) {
     // Build the backend URL - Use the correct URL structure from the Django backend
     const backendUrl = `${BACKEND_URL}/api/resource-management/distributions/`;
     
-    console.log('Fetching distributions from backend URL:', backendUrl);
 
     // Forward the request to the backend
     const response = await fetch(backendUrl, {
@@ -66,7 +65,6 @@ export async function POST(request: NextRequest) {
     // Build the backend URL - Use the correct URL structure from the Django backend
     const backendUrl = `${BACKEND_URL}/api/resource-management/distributions/`;
     
-    console.log('Creating new distribution at backend URL:', backendUrl, body);
 
     // Forward the request to the backend
     const response = await fetch(backendUrl, {

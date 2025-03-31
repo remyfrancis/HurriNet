@@ -34,7 +34,11 @@ type Alert = {
   active: boolean
 }
 
-export default function AlertList() {
+interface AlertListProps {
+  onCreateAlert: (alert: any) => void
+}
+
+export default function AlertList({ onCreateAlert }: AlertListProps) {
   const [alerts, setAlerts] = useState<Alert[]>([])
   const { toast } = useToast()
 
@@ -44,7 +48,22 @@ export default function AlertList() {
 
   const fetchAlerts = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/alerts/`)
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to view alerts",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/alerts/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
       if (!response.ok) throw new Error('Failed to fetch alerts')
       const data = await response.json()
       setAlerts(data)
@@ -58,7 +77,17 @@ export default function AlertList() {
   }
 
   const handleToggleStatus = async (id: number, currentActive: boolean) => {
-    const result = await toggleAlert(id, !currentActive)
+    const token = localStorage.getItem('accessToken')
+    if (!token) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to perform this action",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const result = await toggleAlert(id, !currentActive, token)
     if (result.success) {
       setAlerts(alerts.map(alert => 
         alert.id === id ? { ...alert, active: !currentActive } : alert
@@ -77,7 +106,17 @@ export default function AlertList() {
   }
 
   const handleDelete = async (id: number) => {
-    const result = await deleteAlert(id)
+    const token = localStorage.getItem('accessToken')
+    if (!token) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to perform this action",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const result = await deleteAlert(id, token)
     if (result.success) {
       setAlerts(alerts.filter(alert => alert.id !== id))
       toast({

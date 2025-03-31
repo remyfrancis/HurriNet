@@ -1,16 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
 
 export async function POST(request: NextRequest) {
-  console.log("--- [optimize-allocation/route.ts] POST HANDLER REACHED ---");
 
-  /* For testing, immediately return a success response
-  // We are bypassing the Django call for now to isolate the Next.js routing
-  return NextResponse.json({
-    success: true,
-    message: "[TEST] Next.js route handler reached successfully.",
-    allocations: [], // Return empty allocations for now
-  });
-  */
 
   // Original code commented out for testing:
   try {
@@ -60,11 +51,6 @@ export async function POST(request: NextRequest) {
       suppliersResponse.json()
     ])
 
-    // -- DEBUG LOGGING: Raw fetched data --
-    console.log("Raw Inventory Data:", JSON.stringify(inventory, null, 2));
-    console.log("Raw Resources Data:", JSON.stringify(resources, null, 2));
-    console.log("Raw Suppliers Data:", JSON.stringify(suppliers, null, 2));
-    // -- END DEBUG LOGGING --
 
     // Transform data for optimization
     const items = inventory
@@ -96,11 +82,6 @@ export async function POST(request: NextRequest) {
       } : { lat: 0, lng: 0 }
     }))
 
-    // -- DEBUG LOGGING --
-    console.log(`[optimize-allocation] Prepared Items Count: ${items.length}`)
-    console.log(`[optimize-allocation] Prepared Resources Count: ${resourcesList.length}`)
-    console.log(`[optimize-allocation] Prepared Suppliers Count: ${suppliersList.length}`)
-    // -- END DEBUG LOGGING --
 
     // Forward the optimization request to Django backend with the prepared data
     const response = await fetch(
